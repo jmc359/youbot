@@ -1,2 +1,4 @@
 *.cache
 *.wbproj
+*.DS_STORE
+*build
