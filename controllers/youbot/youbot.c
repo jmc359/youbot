@@ -94,10 +94,16 @@ void stop()
 ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void move_randomly(){
+  go_forward();
+  rotate_robot(15);
+}
 
+int getTimer(int timer){
+   return timer;
+}
 
-
-void robot_control()
+void robot_control(int timer)
 {
 	////////////// TO ROTATE THE ROBOT (BETWEEN 0 - 345) WITH 15 DEGREE INTERVALS ///////////////
 	//rotate_robot(45);
@@ -105,24 +111,30 @@ void robot_control()
 	/////////////////////////////////////////////////////////////////////////////////////////////
 	
 	////////////// TO MOVE ROBOT FORWARD AND TO STOP IT /////////////////////////////////////////
-	// go_forward();
+	//go_forward();
 	// stop();
 	/////////////////////////////////////////////////////////////////////////////////////////////
-	
-	////////////// TO GET RGB FROM THE CAMERA ///////////////////////////////////////////////////
-	//const unsigned char *image = wb_camera_get_image(3);
-	//for (int x = 0; x < 128; x++)
-	//{
-		//for (int y = 0; y < 64; y++) 
-		//{
-			//int r = wb_camera_image_get_red(image, 64, x, y);
-			//int g = wb_camera_image_get_green(image, 64, x, y);
-			//int b = wb_camera_image_get_blue(image, 64, x, y);
-			////printf("red=%d, green=%d, blue=%d", r, g, b);
-		//}
-	//}
-	/////////////////////////////////////////////////////////////////////////////////////////////
-	
+    
+    //move_randomly();
+    
+    if (timer % 16 == 0) {
+      	const unsigned char *image = wb_camera_get_image(3);
+      	int r_sum = 0, g_sum = 0, b_sum = 0;
+      	for (int x = 0; x < 128; x++)
+      	{
+      		for (int y = 0; y < 64; y++) 
+      		{
+      			r_sum += wb_camera_image_get_red(image, 64, x, y);
+      			g_sum += wb_camera_image_get_green(image, 64, x, y);
+      			b_sum += wb_camera_image_get_blue(image, 64, x, y);
+      			
+      		}
+      	}
+      	printf("red=%d, green=%d, blue=%d\n", r_sum, g_sum, b_sum);
+    }
+    
+    //current_rotation += 15;
+    //printf("rotation = %d\n", current_rotation);
 }
 
 
@@ -198,8 +210,9 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     // this is called everytime step.
-    robot_control(); 
-    go_forward();
+    
+    robot_control(getTimer(timer)); 
+    //go_forward();
     
     
     
