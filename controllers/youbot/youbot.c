@@ -94,14 +94,28 @@ void stop()
 ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void move_randomly(){
-  go_forward();
-  rotate_robot(15);
-}
-
 int getTimer(int timer){
    return timer;
 }
+
+// logic for determining how much zombie(s)
+// might change per design sessions
+int calcZombiness(int g, int b){
+  return (g + b);
+}
+
+// returns index of minimum int in @array
+int getIndexOfMin(int* array, size_t size){
+  int minimum = 0;
+   
+  for (int i = 1; i < size; i++)
+  {
+      if (array[i] < array[minimum])
+         minimum = i;
+  }
+  return minimum;
+} // test // int temp[] = {6, 43, 2, 1, 4}; printf("minimum value %d\n", getIndexOfMin(temp, (sizeof(temp)/sizeof(temp[0]))));
+    
 
 void robot_control(int timer)
 {
@@ -111,30 +125,49 @@ void robot_control(int timer)
 	/////////////////////////////////////////////////////////////////////////////////////////////
 	
 	////////////// TO MOVE ROBOT FORWARD AND TO STOP IT /////////////////////////////////////////
-	//go_forward();
+       //go_forward();
 	// stop();
 	/////////////////////////////////////////////////////////////////////////////////////////////
     
-    //move_randomly();
+    go_forward();
     
-    if (timer % 16 == 0) {
-      	const unsigned char *image = wb_camera_get_image(3);
-      	int r_sum = 0, g_sum = 0, b_sum = 0;
-      	for (int x = 0; x < 128; x++)
-      	{
-      		for (int y = 0; y < 64; y++) 
-      		{
-      			r_sum += wb_camera_image_get_red(image, 64, x, y);
-      			g_sum += wb_camera_image_get_green(image, 64, x, y);
-      			b_sum += wb_camera_image_get_blue(image, 64, x, y);
-      			
-      		}
-      	}
-      	printf("red=%d, green=%d, blue=%d\n", r_sum, g_sum, b_sum);
+    int viewpanes = 3; // number of panes to split view
+    int image_width = 128; // standard image width
+    int image_height = 64; // standard image height
+    int view_colors[viewpanes];
+    
+    if (timer % 64 == 0) { // n % 64
+        const unsigned char *image = wb_camera_get_image(3);
+      	 
+      	 for (int i = 0; i < viewpanes; i++) {
+            int viewfactor = image_width/viewpanes; // loss is negligent
+      	     int r_sum = 0, g_sum = 0, b_sum = 0;
+      	     for (int x = (viewfactor * i); // start pixel of current pane
+                     x < (viewfactor * (i + 1)); // start pixel of next pane
+                     x++)
+      	     {
+      	         for (int y = 0; y < image_height; y++) 
+      		  {
+      		      r_sum += wb_camera_image_get_red(image, 64, x, y);
+      		      g_sum += wb_camera_image_get_green(image, 64, x, y);
+      		      b_sum += wb_camera_image_get_blue(image, 64, x, y);
+      		  }
+      		  //printf("x=%d, x_start=%d, x_end=%d\n", x, (viewfactor * i), (viewfactor * (i + 1)));
+      	     }
+      	     int r_avg = r_sum / (image_width * image_height);
+      	     int g_avg = g_sum / (image_width * image_height);
+      	     int b_avg = b_sum / (image_width * image_height);
+      	     //printf("viewpane=%d: red=%d, green=%d, blue=%d\n", (i + 1), r_avg, g_avg, b_avg);
+            printf("viewpane=%d; zombieness=%d\n", (i + 1), calcZombiness(g_avg, b_avg));
+            view_colors[i] = calcZombiness(g_avg, b_avg);
+        }
+        
+        // compute safest route
+        int safe_pane = getIndexOfMin(view_colors, (sizeof(view_colors)/sizeof(view_colors[0])));
+        printf("safest pane=%d\n", safe_pane);
+        
+        // next steps -- convert safest pane into angle, turn by angle --> move forward. 
     }
-    
-    //current_rotation += 15;
-    //printf("rotation = %d\n", current_rotation);
 }
 
 
