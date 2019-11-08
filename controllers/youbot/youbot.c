@@ -143,28 +143,33 @@ void robot_control(int timer)
     int image_width = 128; // standard image width
     int image_height = 64; // standard image height
     int view_colors[viewpanes];
+
     
-    if (timer % 64 == 0) { // n % 64
-        const unsigned char *image = wb_camera_get_image(3);
-         
-         for (int i = 0; i < viewpanes; i++) {
+    if (timer % 16 == 0) { // n % 16 (different camera parameters now)
+        // Get GPS values
+        const double *values = wb_gps_get_values(2);
+        printf("GPS X: %f  Y: %f  Z: %f\n", values[0], values[1], values[2]);
+        
+        // Get image
+        const unsigned char *image = wb_camera_get_image(4);
+        for (int i = 0; i < viewpanes; i++) {
             int viewfactor = image_width/viewpanes; // loss is negligent
-             int r_sum = 0, g_sum = 0, b_sum = 0;
-             for (int x = (viewfactor * i); // start pixel of current pane
+            int r_sum = 0, g_sum = 0, b_sum = 0;
+            for (int x = (viewfactor * i); // start pixel of current pane
                      x < (viewfactor * (i + 1)); // start pixel of next pane
                      x++)
-             {
-                 for (int y = 0; y < image_height; y++) 
             {
-                r_sum += wb_camera_image_get_red(image, 64, x, y);
-                g_sum += wb_camera_image_get_green(image, 64, x, y);
-                b_sum += wb_camera_image_get_blue(image, 64, x, y);
-            }
+                for (int y = 0; y < image_height; y++) 
+                {
+                    r_sum += wb_camera_image_get_red(image, image_width, x, y);
+                    g_sum += wb_camera_image_get_green(image, image_width, x, y);
+                    b_sum += wb_camera_image_get_blue(image, image_width, x, y);
+                }
             //printf("x=%d, x_start=%d, x_end=%d\n", x, (viewfactor * i), (viewfactor * (i + 1)));
-             }
-             int r_avg = r_sum / (image_width * image_height);
-             int g_avg = g_sum / (image_width * image_height);
-             int b_avg = b_sum / (image_width * image_height);
+            }
+            int r_avg = r_sum / (image_width * image_height);
+            int g_avg = g_sum / (image_width * image_height);
+            int b_avg = b_sum / (image_width * image_height);
              //printf("viewpane=%d: red=%d, green=%d, blue=%d\n", (i + 1), r_avg, g_avg, b_avg);
             printf("viewpane=%d; zombieness=%d\n", (i + 1), calcZombiness(g_avg, b_avg));
             view_colors[i] = calcZombiness(g_avg, b_avg);
@@ -216,18 +221,18 @@ int main(int argc, char **argv)
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
   // wb_accelerometer_enable(1,1);
-  // wb_gps_enable(2,TIME_STEP);
-  // wb_compass_enable(3,TIME_STEP);
-  // wb_camera_enable(4,TIME_STEP);
-  // wb_camera_enable(5,TIME_STEP);
-  // wb_camera_enable(6,TIME_STEP);
-  // wb_camera_enable(7,TIME_STEP);
-  // wb_camera_enable(8,TIME_STEP);
-  // wb_camera_enable(9,TIME_STEP);
-  // wb_camera_enable(10,TIME_STEP);
-  // wb_camera_enable(11,TIME_STEP);
+  wb_gps_enable(2,TIME_STEP);
+  wb_compass_enable(3,TIME_STEP);
+  wb_camera_enable(4,TIME_STEP);
+  wb_camera_enable(5,TIME_STEP);
+  wb_camera_enable(6,TIME_STEP);
+  wb_camera_enable(7,TIME_STEP);
+  wb_camera_enable(8,TIME_STEP);
+  wb_camera_enable(9,TIME_STEP);
+  wb_camera_enable(10,TIME_STEP);
+  wb_camera_enable(11,TIME_STEP);
   // wb_gyro_enable(12,TIME_STEP);
-  // wb_light_sensor_enable(13,TIME_STEP);
+  wb_light_sensor_enable(13,TIME_STEP);
   wb_receiver_enable(14,TIME_STEP);
   wb_range_finder_enable(15,TIME_STEP);
   wb_lidar_enable(16,1); //600
@@ -284,13 +289,6 @@ int main(int argc, char **argv)
         printf("Communicating: received \"%s\"\n", buffer);
     	 wb_receiver_next_packet(rec);
     }
-
-
-
-    
-    
-    
-    
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
