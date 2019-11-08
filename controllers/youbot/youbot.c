@@ -34,14 +34,21 @@
 #include <string.h>
 
 #include <webots/camera.h>
+#include <webots/accelerometer.h>
+#include <webots/lidar.h>
 #include <webots/compass.h>
 #include <webots/gps.h>
+#include <webots/range_finder.h>
+#include <webots/gyro.h>
+#include <webots/light_sensor.h>
+#include <webots/receiver.h>
+#include <webots/distance_sensor.h>
 
 #include <youbot_zombie_1.h>
 
-void wb_camera_enable(WbDeviceTag tag, int sampling_period);
-void wb_camera_disable(WbDeviceTag tag);
-int wb_camera_get_sampling_period(WbDeviceTag tag);
+//void wb_camera_enable(WbDeviceTag tag, int sampling_period);
+//void wb_camera_disable(WbDeviceTag tag);
+//int wb_camera_get_sampling_period(WbDeviceTag tag);
 
 int robot_angle = 0;
 #define TIME_STEP 32
@@ -94,6 +101,7 @@ void stop()
 ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
 int getTimer(int timer){
    return timer;
 }
@@ -119,15 +127,15 @@ int getIndexOfMin(int* array, size_t size){
 
 void robot_control(int timer)
 {
-	////////////// TO ROTATE THE ROBOT (BETWEEN 0 - 345) WITH 15 DEGREE INTERVALS ///////////////
-	//rotate_robot(45);
-	//rotate_robot(255);
-	/////////////////////////////////////////////////////////////////////////////////////////////
-	
-	////////////// TO MOVE ROBOT FORWARD AND TO STOP IT /////////////////////////////////////////
+  ////////////// TO ROTATE THE ROBOT (BETWEEN 0 - 345) WITH 15 DEGREE INTERVALS ///////////////
+  //rotate_robot(45);
+  //rotate_robot(255);
+  /////////////////////////////////////////////////////////////////////////////////////////////
+  
+  ////////////// TO MOVE ROBOT FORWARD AND TO STOP IT /////////////////////////////////////////
        //go_forward();
-	// stop();
-	/////////////////////////////////////////////////////////////////////////////////////////////
+  // stop();
+  /////////////////////////////////////////////////////////////////////////////////////////////
     
     go_forward();
     
@@ -138,26 +146,26 @@ void robot_control(int timer)
     
     if (timer % 64 == 0) { // n % 64
         const unsigned char *image = wb_camera_get_image(3);
-      	 
-      	 for (int i = 0; i < viewpanes; i++) {
+         
+         for (int i = 0; i < viewpanes; i++) {
             int viewfactor = image_width/viewpanes; // loss is negligent
-      	     int r_sum = 0, g_sum = 0, b_sum = 0;
-      	     for (int x = (viewfactor * i); // start pixel of current pane
+             int r_sum = 0, g_sum = 0, b_sum = 0;
+             for (int x = (viewfactor * i); // start pixel of current pane
                      x < (viewfactor * (i + 1)); // start pixel of next pane
                      x++)
-      	     {
-      	         for (int y = 0; y < image_height; y++) 
-      		  {
-      		      r_sum += wb_camera_image_get_red(image, 64, x, y);
-      		      g_sum += wb_camera_image_get_green(image, 64, x, y);
-      		      b_sum += wb_camera_image_get_blue(image, 64, x, y);
-      		  }
-      		  //printf("x=%d, x_start=%d, x_end=%d\n", x, (viewfactor * i), (viewfactor * (i + 1)));
-      	     }
-      	     int r_avg = r_sum / (image_width * image_height);
-      	     int g_avg = g_sum / (image_width * image_height);
-      	     int b_avg = b_sum / (image_width * image_height);
-      	     //printf("viewpane=%d: red=%d, green=%d, blue=%d\n", (i + 1), r_avg, g_avg, b_avg);
+             {
+                 for (int y = 0; y < image_height; y++) 
+            {
+                r_sum += wb_camera_image_get_red(image, 64, x, y);
+                g_sum += wb_camera_image_get_green(image, 64, x, y);
+                b_sum += wb_camera_image_get_blue(image, 64, x, y);
+            }
+            //printf("x=%d, x_start=%d, x_end=%d\n", x, (viewfactor * i), (viewfactor * (i + 1)));
+             }
+             int r_avg = r_sum / (image_width * image_height);
+             int g_avg = g_sum / (image_width * image_height);
+             int b_avg = b_sum / (image_width * image_height);
+             //printf("viewpane=%d: red=%d, green=%d, blue=%d\n", (i + 1), r_avg, g_avg, b_avg);
             printf("viewpane=%d; zombieness=%d\n", (i + 1), calcZombiness(g_avg, b_avg));
             view_colors[i] = calcZombiness(g_avg, b_avg);
         }
@@ -182,7 +190,8 @@ int main(int argc, char **argv)
   struct Robot robot_info = {100,100};
   wb_robot_init();
   
-  wb_camera_enable(3,1);
+
+
 
   base_init();
   arm_init();
@@ -201,31 +210,53 @@ int main(int argc, char **argv)
   get_all_berry_pos();
   
   int robot_not_dead = 1;
+   
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////
+  ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+  // wb_accelerometer_enable(1,1);
+  // wb_gps_enable(2,TIME_STEP);
+  // wb_compass_enable(3,TIME_STEP);
+  // wb_camera_enable(4,TIME_STEP);
+  // wb_camera_enable(5,TIME_STEP);
+  // wb_camera_enable(6,TIME_STEP);
+  // wb_camera_enable(7,TIME_STEP);
+  // wb_camera_enable(8,TIME_STEP);
+  // wb_camera_enable(9,TIME_STEP);
+  // wb_camera_enable(10,TIME_STEP);
+  // wb_camera_enable(11,TIME_STEP);
+  // wb_gyro_enable(12,TIME_STEP);
+  // wb_light_sensor_enable(13,TIME_STEP);
+  wb_receiver_enable(14,TIME_STEP);
+  wb_range_finder_enable(15,TIME_STEP);
+  wb_lidar_enable(16,1); //600
   
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////
-  ///////////////////////// DECLARE LOCAL VARIABLES HERE ONLY //////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
-    
+  WbDeviceTag lidar = wb_robot_get_device("lidar");
+  wb_lidar_enable_point_cloud(lidar);
+
+  WbDeviceTag rec = wb_robot_get_device("receiver");
+
     
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
-  
   while (robot_not_dead == 1) 
   {
+
 	if (robot_info.health < 0)
     {
 		robot_not_dead = 0;
 		printf("ROBOT IS OUT OF HEALTH\n");
 	}
-	if (timer % 8 == 0)
+	
+	if (timer % 2 == 0)
 	{  
 		const double *trans = wb_supervisor_field_get_sf_vec3f(trans_field);
 		check_berry_collision(&robot_info, trans[0], trans[2]);
 		check_zombie_collision(&robot_info, trans[0], trans[2]);
 	}
-    if (timer == 64)
+    if (timer == 16)
     {
         update_robot(&robot_info);
         timer = 0;
@@ -243,9 +274,19 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     // this is called everytime step.
-    
-    robot_control(getTimer(timer)); 
+    robot_control(getTimer(timer));
     //go_forward();
+    //stop();
+
+    if (wb_receiver_get_queue_length(rec) > 0) 
+    {
+        const char *buffer = wb_receiver_get_data(rec);
+        printf("Communicating: received \"%s\"\n", buffer);
+    	 wb_receiver_next_packet(rec);
+    }
+
+
+
     
     
     

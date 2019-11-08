@@ -3,7 +3,7 @@ WorldInfo {
 }
 Viewpoint {
   orientation -0.4251333839623418 0.8830310338779499 0.19879084246807432 0.9424096470791771
-  position 38.70192409445387 22.38717417746416 31.701687975620036
+  position 1.547810159591874 1.430807555911284 1.9798882939120586
 }
 TexturedBackground {
 }
@@ -22,8 +22,14 @@ DEF Youbot Youbot {
     }
     Compass {
     }
-    Camera {
+    DEF ForwardCamera Camera {
       translation 0.3 0 0
+      rotation 0.5773506025225371 -0.5773506025225371 -0.5773496025232256 2.09439
+      fieldOfView 1
+      width 128
+    }
+    DEF BackCamera Camera {
+      translation -0.27 -2.00826e-06 1.02099e-06
       rotation 0.5773506025225371 -0.5773506025225371 -0.5773496025232256 2.09439
       fieldOfView 1
       width 128

@@ -14,12 +14,14 @@
 
 """Pedestrian class container."""
 from controller import Supervisor
+from controller import Emitter
 
 import optparse
 import math
 import random
+import struct   
 
-#notjing
+
 
 class Pedestrian (Supervisor):
     def __init__(self):
@@ -89,8 +91,8 @@ class Pedestrian (Supervisor):
         return ang
         
     def move_zombie(self, zombie_x, zombie_z, target_x, target_z):
-        move_x = ((target_x - zombie_x)/ (abs(target_x - zombie_x) + abs(target_z - zombie_z))) *0.005
-        move_z = ((target_z - zombie_z) / (abs(target_x - zombie_x) + abs(target_z - zombie_z))) * 0.005
+        move_x = ((target_x - zombie_x)/ (abs(target_x - zombie_x) + abs(target_z - zombie_z))) *0.02 #0.005
+        move_z = ((target_z - zombie_z) / (abs(target_x - zombie_x) + abs(target_z - zombie_z))) * 0.02 #0.005
         
         #print (abs(move_x) + abs(move_z))
         root_translation = [zombie_x + move_x, self.ROOT_HEIGHT + self.current_height_offset, zombie_z+move_z]
@@ -123,11 +125,17 @@ class Pedestrian (Supervisor):
         timer = 0
         self.time_step = int(self.getBasicTimeStep())
         goal = [5,5]
+
+        emitter = Emitter("emitter")
+        message = struct.pack("chd",b"g",100,120.08)
+        emitter.setChannel(-1)
+        emitter.setRange(4)
         while not self.step(self.time_step) == -1:
             self.translation = self.translationField.getSFVec3f()
             self.move_zombie(self.translation[0], self.translation[2], goal[0],goal[1])
             
-            if (timer == 32): #only change movement once every second
+            if (timer == 16): #only change movement once every second
+                emitter.send(message)
                 timer = 0
                 youbotTranslation = youbotTranslationField.getSFVec3f()
                 if (self.youbotDistance(youbotTranslation, self.translation) < 3):#if robot close, chase it
@@ -148,6 +156,16 @@ class Pedestrian (Supervisor):
                             goal[1] = -12
                         if (goal[1] > 12):
                             goal[1] = 12
+                if ((goal[0] <= -1) and (self.translation[0] > -1) and (self.translation[2] >0)):
+                    goal[0] = -0.5
+                    print ("a")
+                if ((goal[0] >= -1) and (self.translation[0] < -1) and (self.translation[2] >0)):
+                    goal[0] = -1.5
+                if ((goal[1] <= -5) and (self.translation[2] > -5) and (self.translation[0] >-4)):
+                    goal[1] = -4.5
+                if ((goal[1] >= -5) and (self.translation[2] < -5) and (self.translation[0] >-4)):
+                    goal[1] = -5.5
+                    print ("b")
             timer = timer +1
 		
 

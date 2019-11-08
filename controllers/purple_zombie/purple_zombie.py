@@ -14,10 +14,12 @@
 
 """Pedestrian class container."""
 from controller import Supervisor
+from controller import Emitter
 
 import optparse
 import math
 import random
+import struct 
 
 #notjing
 
@@ -105,8 +107,8 @@ class Pedestrian (Supervisor):
         return ang
         
     def move_zombie(self, zombie_x, zombie_z, target_x, target_z):
-        move_x = ((target_x - zombie_x)/ (abs(target_x - zombie_x) + abs(target_z - zombie_z))) *0.01
-        move_z = ((target_z - zombie_z) / (abs(target_x - zombie_x) + abs(target_z - zombie_z))) * 0.01
+        move_x = ((target_x - zombie_x)/ (abs(target_x - zombie_x) + abs(target_z - zombie_z))) *0.04 #0.01
+        move_z = ((target_z - zombie_z) / (abs(target_x - zombie_x) + abs(target_z - zombie_z))) * 0.04 #0.01
         
         #print (abs(move_x) + abs(move_z))
         root_translation = [zombie_x + move_x, self.ROOT_HEIGHT + self.current_height_offset, zombie_z+move_z]
@@ -140,12 +142,17 @@ class Pedestrian (Supervisor):
         self.time_step = int(self.getBasicTimeStep())
         goal = [5,5]
         time_at_berry = 0
+        emitter = Emitter("emitter")
+        message = struct.pack("chd",b"p",100,120.08)
+        emitter.setChannel(-1)
+        emitter.setRange(4)
         while not self.step(self.time_step) == -1:
             self.translation = self.translationField.getSFVec3f()
             self.move_zombie(self.translation[0], self.translation[2], goal[0],goal[1])
             
             if (timer == 32): #only change movement once every second
                 timer = 0
+                emitter.send(message)
                 youbotTranslation = youbotTranslationField.getSFVec3f()
 
                 berryDistance = self.check_berry_close(self.translation)
@@ -174,7 +181,14 @@ class Pedestrian (Supervisor):
                             goal[1] = -12
                         if (goal[1] > 12):
                             goal[1] = 12
-
+                if ((goal[0] <= -1) and (self.translation[0] > -1) and (self.translation[2] >0)):
+                    goal[0] = -0.5
+                if ((goal[0] >= -1) and (self.translation[0] < -1) and (self.translation[2] >0)):
+                    goal[0] = -1.5
+                if ((goal[1] <= -5) and (self.translation[2] > -5) and (self.translation[0] >-4)):
+                    goal[1] = -4.5
+                if ((goal[1] >= -5) and (self.translation[2] < -5) and (self.translation[0] >-4)):
+                    goal[1] = -5.5
                 if (time_at_berry < 30 and time_at_berry > 10):
                     #print ("waiting till next berry")
                     time_at_berry = time_at_berry+ 1

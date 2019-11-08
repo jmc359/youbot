@@ -1,38 +1,130 @@
 #VRML_SIM R2019b utf8
 WorldInfo {
+  basicTimeStep 128
 }
 Viewpoint {
-  orientation -0.4251333839623418 0.8830310338779499 0.19879084246807432 0.9424096470791771
-  position 16.870080456208818 9.012999416155093 12.292035512324851
+  orientation 0.6247958101554225 -0.7426011534638155 -0.2411922935884145 5.350296236295864
+  position 22.992962732178622 22.0507865890278 24.59827434789443
 }
 TexturedBackground {
 }
+Tree {
+  translation -8 0 -4
+  scale 1.5 10 1.5
+}
+Tree {
+  translation 9 0 -11
+  name "tree(1)"
+  scale 1.5 10 1.5
+}
 TexturedBackgroundLight {
+  castShadows FALSE
 }
 RectangleArena {
   floorSize 25 25
   floorTileSize 50 50
 }
 DEF Youbot Youbot {
-  translation 0.14076715054326405 0.09888451631209307 0.001588300266450333
-  rotation 0.9999656128857898 0.004035837651627724 0.007244657369166404 -1.5708932869620398
+  translation 0.8550023801432816 0.09920990030307975 -0.14921009070229133
+  rotation 0.999964175475866 0.0036367606381865858 0.007643411341282276 -1.570895307179586
   supervisor TRUE
   bodySlot [
+    Accelerometer {
+    }
     GPS {
     }
     Compass {
     }
-    Camera {
+    DEF ForwardLowResBigFov Camera {
       translation 0.3 0 0
       rotation 0.5773506025225371 -0.5773506025225371 -0.5773496025232256 2.09439
+      name "ForwardLowResBigFov"
       fieldOfView 1
       width 128
+    }
+    DEF ForwardHighResSmallFov Camera {
+      translation 0.3 0 0
+      rotation 0.5773506025225371 -0.5773506025225371 -0.5773496025232256 2.09439
+      name "ForwardHighResSmallFov"
+      fieldOfView 0.5
+      width 256
+      height 128
+    }
+    DEF ForwardHighResBigFov Camera {
+      translation 0.3 0 0
+      rotation 0.5773506025225371 -0.5773506025225371 -0.5773496025232256 2.09439
+      name "ForwardHighRes"
+      fieldOfView 1
+      width 256
+      height 128
+    }
+    DEF ForwardHighResSmallFov Camera {
+      translation 0.3 0 0
+      rotation 0.5773506025225371 -0.5773506025225371 -0.5773496025232256 2.09439
+      name "ForwardHighResBigFov"
+      fieldOfView 0.5
+      width 256
+      height 128
+    }
+    DEF BackLowRes Camera {
+      translation -0.27 -2.00826e-06 1.02099e-06
+      rotation 0.5773486025216047 0.5773526025188509 0.5773496025209163 2.0944
+      name "BackLowRes"
+      fieldOfView 1
+      width 128
+    }
+    DEF RightLowRes Camera {
+      translation -0.00999658 -0.200002 1.57252e-06
+      rotation -6.106782428407177e-07 0.7071072811864377 0.70710628118604 -3.1415853071795863
+      name "RightLowRes"
+      fieldOfView 1
+      width 128
+    }
+    DEF LeftLowRes Camera {
+      translation -0.00999894 0.189998 -2.08147e-07
+      rotation -0.9999999999879128 -4.8411699999414835e-06 -8.588339999896191e-07 -1.5707953071795862
+      name "LeftLowRes"
+      fieldOfView 1
+      width 128
+    }
+    DEF BackHighRes Camera {
+      translation -0.27 -2.00826e-06 1.02099e-06
+      rotation 0.5773486025216047 0.5773526025188509 0.5773496025209163 2.0944
+      name "BackHighRes"
+      fieldOfView 1
+      width 256
+      height 128
+    }
+    Gyro {
+    }
+    LightSensor {
+    }
+    Receiver {
+    }
+    RangeFinder {
+      translation 0.41 0 0
+      rotation -0.5773502691896258 0.5773502691896258 0.5773502691896258 -2.0944
+      maxRange 5
+    }
+    Lidar {
+      rotation 0.5773509358554485 0.5773489358556708 0.5773509358554485 2.0944
+      numberOfLayers 1
+      near 0.3
+      minRange 0.3
+      maxRange 10
+      type "rotating"
+    }
+    DistanceSensor {
+      translation 0.33 1.21658e-07 -0.0799999
+      rotation 1 0 0 1.5708
+    }
+    Group {
     }
   ]
 }
 DEF Berry0 Solid {
-  translation -10.11 0.024951 -10.97
-  rotation -0.5815193186260474 0.6867442232928295 -0.4361394889695566 -8.7974853691186e-17
+  translation -10.11 0.024950950000000013 -10.97
+  rotation 0.25516104209201224 -0.02112388430895161 -0.9666677940793417 -8.688212422224377e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -52,9 +144,51 @@ DEF Berry0 Solid {
   physics Physics {
   }
 }
+DEF Wall Solid {
+  translation 5.01 0.7 -5.02
+  rotation 0.3066079193795392 -0.011854155239539529 -0.9517620830739724 -6.674201642052153e-16
+  children [
+    Shape {
+      appearance PBRAppearance {
+        roughness 1
+        metalness 0
+      }
+      geometry Box {
+        size 15 2.5 0.3
+      }
+    }
+  ]
+  name "solid(20)"
+  boundingObject Shape {
+    geometry Box {
+      size 15 2.5 0.3
+    }
+  }
+}
+DEF Wall Solid {
+  translation -1 0.7 7.41
+  rotation 0.3066079193795392 -0.011854155239539529 -0.9517620830739724 -6.674201642052153e-16
+  children [
+    Shape {
+      appearance PBRAppearance {
+        roughness 1
+        metalness 0
+      }
+      geometry Box {
+        size 0.3 2.5 10
+      }
+    }
+  ]
+  name "solid(21)"
+  boundingObject Shape {
+    geometry Box {
+      size 0.3 2.5 10
+    }
+  }
+}
 DEF Berry1 Solid {
-  translation 11.11 0.024951 -8.31
-  rotation 0.11265296292844217 -0.26534308613045965 0.9575501848917406 3.0275325592767513e-16
+  translation 9.55 0.024950950000000024 -11.35
+  rotation 0.42801907205163314 -0.017727669084757827 0.9035958187756736 7.171513651880765e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -76,8 +210,8 @@ DEF Berry1 Solid {
   }
 }
 DEF Berry2 Solid {
-  translation 6.07 0.02495095003956091 -5.62
-  rotation -0.5546592307677602 -0.012153090280695542 0.831988846151645 3.6894059730269024e-16
+  translation -9.85 0.024950950000000024 -5.11
+  rotation -0.49173502091023397 0.13294347922027 0.8605362865929719 1.3871719469299479e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -99,8 +233,8 @@ DEF Berry2 Solid {
   }
 }
 DEF Berry3 Solid {
-  translation 1.21 0.02495095003956091 -9.37
-  rotation -0.626337958712023 0.14721923763193245 0.7655241717591474 2.450390061617619e-16
+  translation 1.21 0.024950950000000013 -9.37
+  rotation 0.18379580497399436 0.07307686181901321 0.9802442931946334 -8.35042078059928e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -122,8 +256,8 @@ DEF Berry3 Solid {
   }
 }
 DEF Berry4 Solid {
-  translation 1.21 0.02495095003956091 7.09
-  rotation -0.8028695155496204 -0.07364851273661005 0.5915880640891965 4.035618257156009e-16
+  translation 1.21 0.024950950000000013 7.09
+  rotation -0.9146172426125658 0.37765078190985246 0.14441324883356046 3.5425473346762105e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -145,8 +279,8 @@ DEF Berry4 Solid {
   }
 }
 DEF Berry5 Solid {
-  translation 4.69 0.02495095003956091 8.29
-  rotation -0.7360529711425696 -0.05463872972195998 0.6747152235473616 2.780184523693354e-16
+  translation -8.09 0.02495095000000002 -4.63
+  rotation 0.8428805175005761 0.5244554349834049 0.12041150250008587 1.416228956883183e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -168,8 +302,8 @@ DEF Berry5 Solid {
   }
 }
 DEF Berry6 Solid {
-  translation 6.19 0.024951 11.58
-  rotation -0.6929983014589793 -0.19876294511283404 0.6929983014589877 2.2146840850989474e-16
+  translation 6.19 0.024950950000000013 11.58
+  rotation -0.7774744030964151 0.09313982042610232 -0.6219795224771202 2.1933874080388928e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -191,8 +325,8 @@ DEF Berry6 Solid {
   }
 }
 DEF Berry7 Solid {
-  translation -11.35 0.0249509 -3.2516e-16
-  rotation 0.5808589743509259 -0.036117055130980597 0.8132025640912945 2.9358289036161054e-16
+  translation -11.35 0.024950950000003365 1.12
+  rotation -0.17126603969952364 0.11351877230904435 0.9786630839972909 6.969927010464296e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -214,8 +348,8 @@ DEF Berry7 Solid {
   }
 }
 DEF Berry8 Solid {
-  translation -4.75 0.024950949960439117 6.12
-  rotation -0.7866628555450961 -0.2907894572371599 0.5446127461466111 2.818098401297167e-16
+  translation -4.75 0.024950950000000017 6.12
+  rotation -0.9237828490050954 0.38291676364979 3.1716300106879295e-15 2.953599006798289e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -237,8 +371,8 @@ DEF Berry8 Solid {
   }
 }
 DEF Berry9 Solid {
-  translation -4.7 0.024950950039560913 -3.56
-  rotation 0.44894336298353316 -0.8935602144416656 1.2695941720334336e-14 7.596960803658512e-17
+  translation -7.09 0.024950950000000024 -3.56
+  rotation 0.7923346855065984 -0.2615263858865867 -0.5511893464393703 4.950175693606028e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -260,8 +394,8 @@ DEF Berry9 Solid {
   }
 }
 DEF Berry10 Solid {
-  translation -0.6 0.024950950039560903 -5.2
-  rotation -0.5001020433375752 -0.06103853899071516 0.8638126203103661 3.750900136075702e-16
+  translation -0.6 0.024950950000000013 -5.2
+  rotation 0.5674571546900639 -0.2630526876390683 0.7802535876988453 2.4041322615881286e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -283,8 +417,8 @@ DEF Berry10 Solid {
   }
 }
 DEF Berry11 Solid {
-  translation -2.18 0.024950949960439114 8.59
-  rotation -0.15185180810197257 -0.05195649400169645 0.9870367526628444 2.2460089045222963e-16
+  translation -2.18 0.02495095000000001 8.59
+  rotation -0.49425027906575014 -0.19448076853565666 0.8472861926841534 2.415197009768732e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -306,8 +440,8 @@ DEF Berry11 Solid {
   }
 }
 DEF Berry12 Solid {
-  translation 9.26 0.024950950039560903 2.0572236625457624e-16
-  rotation 0.2807224570427565 -0.46037921447304264 0.8421673711282467 6.074692362658452e-17
+  translation 9.26 0.024950950000000006 2.1630602983940018e-16
+  rotation 0.022664965302752638 -0.22283131170588785 0.9745935080182192 7.523958422373551e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -329,8 +463,8 @@ DEF Berry12 Solid {
   }
 }
 DEF Berry13 Solid {
-  translation 8.68 0.02495095003956091 8.38
-  rotation -0.048628834101757515 0.061994943801134225 0.9968910990860526 7.013544936141377e-16
+  translation 8.68 0.02495095000000001 8.38
+  rotation 0.06513298393106673 0.12496163234693834 0.9900213557521998 1.3090929225882394e-15
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -352,8 +486,8 @@ DEF Berry13 Solid {
   }
 }
 DEF Berry14 Solid {
-  translation 6.15 0.024951 0.61
-  rotation -0.5546592307677602 -0.012153090280695542 0.831988846151645 3.6894059730269024e-16
+  translation 6.15 0.02495095 0.61
+  rotation -0.027694093084763567 -0.07245177051892422 0.9969873510515996 6.157640044772779e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -375,8 +509,8 @@ DEF Berry14 Solid {
   }
 }
 DEF Berry15 Solid {
-  translation 5.42 0.02495095003956091 5.16
-  rotation -0.25643592125202636 -0.0974644192389106 0.9616347046951074 5.320011510082473e-16
+  translation 8.04 0.02495095000000002 -10.38
+  rotation -0.32579970583654955 -0.16541189793171066 0.9308563023901417 7.327887500769207e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -398,8 +532,8 @@ DEF Berry15 Solid {
   }
 }
 DEF Berry16 Solid {
-  translation 11.53 0.024951 5.44
-  rotation -0.5546592307677602 -0.012153090280695542 0.831988846151645 3.6894059730269024e-16
+  translation 9.71 0.024950950000000024 -10.21
+  rotation -0.701397845053272 -0.3624706909244781 0.6137231144216077 3.8900662791622076e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -421,8 +555,8 @@ DEF Berry16 Solid {
   }
 }
 DEF Berry17 Solid {
-  translation -9.11 0.0249509 10.3
-  rotation -0.3200106264252359 -0.8917322456600126 -0.3200106264252468 1.0657787117094757e-16
+  translation -9.11 0.02495095000000001 10.3
+  rotation 0.20968406271121323 -0.32376474589213605 0.922609875929323 8.132723792999429e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -444,8 +578,8 @@ DEF Berry17 Solid {
   }
 }
 DEF Berry18 Solid {
-  translation -6.14 0.024950949960439117 -8.1
-  rotation -0.9342096272564243 -0.2005476699469817 0.2950135665020326 3.4682524997965017e-16
+  translation -8.75 0.024950950000000027 -3.56
+  rotation -0.908777493835663 -0.3097320978210947 -0.27962384425709375 2.4394236769825035e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -467,8 +601,8 @@ DEF Berry18 Solid {
   }
 }
 DEF Berry19 Solid {
-  translation -3.84 0.024950949960439114 2.4
-  rotation -0.5703012279626487 -0.10485362958881823 0.8147160399466467 4.1862501343067204e-16
+  translation 8.23 0.024950950000000024 -11.34
+  rotation -0.12974115258557312 0.10443481326662298 0.9860327596503741 6.571941638561616e-16
   scale 0.5 0.5 0.5
   children [
     Shape {
@@ -490,8 +624,8 @@ DEF Berry19 Solid {
   }
 }
 DEF zombie1 Pedestrian {
-  translation -9.407740772373618 1.27 -8.733439227626375
-  rotation 0 1 0 0.809354960504162
+  translation -8.712289379850112 1.27 -8.10589062014983
+  rotation 0 1 0 0.8080057916952207
   name "pedestrian1"
   controller "blue_zombie"
   controllerArgs "--trajectory=\"\" --speed=1.5"
@@ -499,6 +633,12 @@ DEF zombie1 Pedestrian {
   pantsColor 0 0.5 1
   shoesColor 0 0.5 1
   skinColor 0 0.5 1
+  bodySlot [
+    Emitter {
+      range 4
+      channel -1
+    }
+  ]
   rightLegAngle 0.23563636363636417
   rightLowerLegAngle 0.13490909090909156
   rightFootAngle 0.40472727272727466
@@ -514,8 +654,8 @@ DEF zombie1 Pedestrian {
   headAngle 0.003272727272726854
 }
 DEF zombie2 Pedestrian {
-  translation -9.65226 1.27 5.98729
-  rotation 0 1 0 1.638077125245857
+  translation -7.44729 1.27 7.91339
+  rotation 0 1 0 1.638076041627206
   name "pedestrian(1)"
   controller "green_zombie"
   controllerArgs "--trajectory=\"\" --speed=1.5"
@@ -523,6 +663,16 @@ DEF zombie2 Pedestrian {
   pantsColor 0 0.7 0
   shoesColor 0 0.7 0
   skinColor 0 0.7 0
+  bodySlot [
+    Emitter {
+      range 4
+      channel -1
+    }
+  ]
+  leftHandSlot [
+    Emitter {
+    }
+  ]
   rightLegAngle 0.23563636363636417
   rightLowerLegAngle 0.13490909090909156
   rightFootAngle 0.40472727272727466
@@ -538,8 +688,8 @@ DEF zombie2 Pedestrian {
   headAngle 0.003272727272726854
 }
 DEF zombie7 Pedestrian {
-  translation 3.82462 1.27 -10.7703
-  rotation 0 -1 0 -1.3762753071795863
+  translation 4.13737 1.27 -6.57418
+  rotation 0 1 0 0.07439369258002645
   name "pedestrian(3)"
   controller "green_zombie"
   controllerArgs "--trajectory=\"\" --speed=1.5"
@@ -547,6 +697,16 @@ DEF zombie7 Pedestrian {
   pantsColor 0 0.7 0
   shoesColor 0 0.7 0
   skinColor 0 0.7 0
+  bodySlot [
+    Emitter {
+      range 4
+      channel -1
+    }
+  ]
+  leftHandSlot [
+    Emitter {
+    }
+  ]
   rightLegAngle 0.23563636363636417
   rightLowerLegAngle 0.13490909090909156
   rightFootAngle 0.40472727272727466
@@ -562,8 +722,8 @@ DEF zombie7 Pedestrian {
   headAngle 0.003272727272726854
 }
 DEF zombie3 Pedestrian {
-  translation 11.5586 1.27 2.65056
-  rotation 0 1 0 -1.295756644503599
+  translation 11.7355 2.62 2.63919
+  rotation 0 1 0 -1.233673668943826
   name "pedestrian(2)"
   controller "blue_zombie"
   controllerArgs "--trajectory=\"\" --speed=1.5"
@@ -571,6 +731,12 @@ DEF zombie3 Pedestrian {
   pantsColor 0 0.5 1
   shoesColor 0 0.5 1
   skinColor 0 0.5 1
+  bodySlot [
+    Emitter {
+      range 4
+      channel -1
+    }
+  ]
   rightLegAngle 0.23563636363636417
   rightLowerLegAngle 0.13490909090909156
   rightFootAngle 0.40472727272727466
@@ -586,8 +752,8 @@ DEF zombie3 Pedestrian {
   headAngle 0.003272727272726854
 }
 DEF zombie4 Pedestrian {
-  translation -0.96338 1.27 10.1986
-  rotation 0 1 0 -1.295756644503599
+  translation 0.8160939519026674 1.27 9.53008456254121
+  rotation 0 1 0 2.395900359466534
   name "pedestrian(5)"
   controller "purple_zombie"
   controllerArgs "--trajectory=\"\" --speed=1.5"
@@ -595,6 +761,12 @@ DEF zombie4 Pedestrian {
   pantsColor 0.6 0.2 1
   shoesColor 0.6 0.2 1
   skinColor 0.6 0.2 1
+  bodySlot [
+    Emitter {
+      range 4
+      channel -1
+    }
+  ]
   rightLegAngle 0.23563636363636417
   rightLowerLegAngle 0.13490909090909156
   rightFootAngle 0.40472727272727466
@@ -610,15 +782,21 @@ DEF zombie4 Pedestrian {
   headAngle 0.003272727272726854
 }
 DEF zombie5 Pedestrian {
-  translation -1.8981 1.27 -3.94272
-  rotation 0 1 0 1.58404
+  translation -6.62223 1.27 1.87031
+  rotation 0 1 0 0.6206635725266197
   name "pedestrian(4)"
   controller "acqua_zombie"
-  controllerArgs "--trajectory=\"\" --speed=2.5"
+  controllerArgs "--trajectory=\"\" --speed=1.5"
   shirtColor 0 0.9 0.7
   pantsColor 0 0.9 0.7
   shoesColor 0 0.9 0.7
   skinColor 0 0.9 0.7
+  bodySlot [
+    Emitter {
+      range 4
+      channel -1
+    }
+  ]
   rightLegAngle 0.23563636363636417
   rightLowerLegAngle 0.13490909090909156
   rightFootAngle 0.40472727272727466
@@ -634,8 +812,8 @@ DEF zombie5 Pedestrian {
   headAngle 0.003272727272726854
 }
 DEF zombie6 Pedestrian {
-  translation 3.828 1.27 7.18735
-  rotation 0 1 0 -1.295756644503599
+  translation 8.1885 1.27 7.86279
+  rotation 0 1 0 2.6798368822606005
   name "pedestrian(6)"
   controller "acqua_zombie"
   controllerArgs "--trajectory=\"\" --speed=1.5"
@@ -643,6 +821,12 @@ DEF zombie6 Pedestrian {
   pantsColor 0 0.9 0.7
   shoesColor 0 0.9 0.7
   skinColor 0 0.9 0.7
+  bodySlot [
+    Emitter {
+      range 4
+      channel -1
+    }
+  ]
   rightLegAngle 0.23563636363636417
   rightLowerLegAngle 0.13490909090909156
   rightFootAngle 0.40472727272727466
