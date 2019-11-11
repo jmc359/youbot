@@ -322,17 +322,23 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     // this is called everytime step.
-    robot_control(getTimer(timer));
+    robot_control(timer);
     //go_forward();
     //stop();
 
     // RR ?? testing receiver -- does this work? 
+    int count = 0;
     if (wb_receiver_get_queue_length(rec) > 0) 
     {
         const char *buffer = wb_receiver_get_data(rec);
         printf("Communicating: received \"%s\"\n", buffer);
     	 wb_receiver_next_packet(rec);
+        count++;
     }
+    
+    // if(timer % 16 == 0){
+      printf("Receiver: %d zombies\n", count);
+    // }
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
