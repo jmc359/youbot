@@ -125,17 +125,33 @@ int getIndexOfMin(int* array, size_t size){
 } // test // int temp[] = {6, 43, 2, 1, 4}; printf("minimum value %d\n", getIndexOfMin(temp, (sizeof(temp)/sizeof(temp[0]))));
     
 
+double get_bearing_in_degrees() {
+  const double *north = wb_compass_get_values(3);
+  double rad = atan2(north[0], north[2]);
+  double bearing = (rad - 1.5708) / M_PI * 180.0;
+  if (bearing < 0.0)
+    bearing = bearing + 360.0;
+  return bearing;
+}
+
+double get_bearing_in_radians() {
+  const double *north = wb_compass_get_values(3);
+  return atan2(north[0], north[2]);
+}
+
+
 void robot_control(int timer)
 {
-  ////////////// TO ROTATE THE ROBOT (BETWEEN 0 - 345) WITH 15 DEGREE INTERVALS ///////////////
-  //rotate_robot(45);
-  //rotate_robot(255);
-  /////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////// TO ROTATE THE ROBOT (BETWEEN 0 - 345) WITH 15 DEGREE INTERVALS ///////////////
+    //rotate_robot(45);
+    //rotate_robot(255);
+    /////////////////////////////////////////////////////////////////////////////////////////////
   
-  ////////////// TO MOVE ROBOT FORWARD AND TO STOP IT /////////////////////////////////////////
-       //go_forward();
-  // stop();
-  /////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////// TO MOVE ROBOT FORWARD AND TO STOP IT /////////////////////////////////////////
+    //go_forward();
+    // stop();
+    /////////////////////////////////////////////////////////////////////////////////////////////
+    // printf("\f"); // clear console
     
     go_forward();
     
@@ -146,11 +162,39 @@ void robot_control(int timer)
 
     
     if (timer % 16 == 0) { // n % 16 (different camera parameters now)
-        // Get GPS values
+        // get GPS values
         const double *values = wb_gps_get_values(2);
-        printf("GPS X: %f  Y: %f  Z: %f\n", values[0], values[1], values[2]);
+        printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", values[0], values[1], values[2]);
         
-        // Get image
+        // get accelerometer values
+        const double *acceleration = wb_accelerometer_get_values(1);
+        printf("ACCL: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", acceleration[0], acceleration[1], acceleration[2]);
+        
+        // get compass values
+        printf("COMP: radians = %+.3f, degrees = %+.3f\n", get_bearing_in_radians(), get_bearing_in_degrees());
+        
+        // get gyro rotation axes
+        const double *vel = wb_gyro_get_values(12);
+        printf("GYRO: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", vel[0], vel[1], vel[2]);
+        
+        // RR ?? get light value (aka interpolated irradiance with ?lookupTable)
+        const double light = wb_light_sensor_get_value(13);
+        printf("LGHT: %.3f\n", light);
+        
+        // RR ?? get receiver values -- purpose? not congruent with design specs?
+        WbDeviceTag communication = wb_robot_get_device("receiver");
+        if (wb_receiver_get_queue_length(communication) > 0) {
+            /* compute and print position of the Emitter from signal strength and direction */
+            double signalStrength = wb_receiver_get_signal_strength(communication);
+            const double *direction = wb_receiver_get_emitter_direction(communication);
+            double dist = 1 / sqrt(signalStrength);
+            printf("\fEmitter position: time = %.3lf   X = %.3lf Z = %.3lf\n", 
+               wb_robot_get_time(), direction[0] * dist,
+               direction[2] * dist);
+            wb_receiver_next_packet(communication);
+        }
+        
+        // get image
         const unsigned char *image = wb_camera_get_image(4);
         for (int i = 0; i < viewpanes; i++) {
             int viewfactor = image_width/viewpanes; // loss is negligent
@@ -179,6 +223,7 @@ void robot_control(int timer)
         int safe_pane = getIndexOfMin(view_colors, (sizeof(view_colors)/sizeof(view_colors[0])));
         printf("safest pane=%d\n", safe_pane);
         
+        printf("\n"); // new line between iterations
         // next steps -- convert safest pane into angle, turn by angle --> move forward. 
     }
 }
@@ -194,9 +239,6 @@ int main(int argc, char **argv)
 
   struct Robot robot_info = {100,100};
   wb_robot_init();
-  
-
-
 
   base_init();
   arm_init();
@@ -220,10 +262,10 @@ int main(int argc, char **argv)
   ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
-  // wb_accelerometer_enable(1,1);
-  wb_gps_enable(2,TIME_STEP);
-  wb_compass_enable(3,TIME_STEP);
-  wb_camera_enable(4,TIME_STEP);
+  wb_accelerometer_enable(1,1);         // test in robot_control
+  wb_gps_enable(2,TIME_STEP);           // test in robot_control
+  wb_compass_enable(3,TIME_STEP);       // test in robot_control
+  wb_camera_enable(4,TIME_STEP);        // test in robot_control
   wb_camera_enable(5,TIME_STEP);
   wb_camera_enable(6,TIME_STEP);
   wb_camera_enable(7,TIME_STEP);
@@ -231,17 +273,18 @@ int main(int argc, char **argv)
   wb_camera_enable(9,TIME_STEP);
   wb_camera_enable(10,TIME_STEP);
   wb_camera_enable(11,TIME_STEP);
-  // wb_gyro_enable(12,TIME_STEP);
-  wb_light_sensor_enable(13,TIME_STEP);
-  wb_receiver_enable(14,TIME_STEP);
+  wb_gyro_enable(12,TIME_STEP);         // test in robot_control
+  wb_light_sensor_enable(13,TIME_STEP); // test in robot control
+  wb_receiver_enable(14,TIME_STEP);     // RR ?? not fully tested - see main/robot_control
   wb_range_finder_enable(15,TIME_STEP);
-  wb_lidar_enable(16,1); //600
+  wb_lidar_enable(16,1);                // RR ?? not fully tested - see main
   
+  // RR ?? testing lidar -- what about testing info extraction from point cloud? 
   WbDeviceTag lidar = wb_robot_get_device("lidar");
   wb_lidar_enable_point_cloud(lidar);
 
+  // RR ?? testing receiver -- see main
   WbDeviceTag rec = wb_robot_get_device("receiver");
-
     
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
@@ -283,6 +326,7 @@ int main(int argc, char **argv)
     //go_forward();
     //stop();
 
+    // RR ?? testing receiver -- does this work? 
     if (wb_receiver_get_queue_length(rec) > 0) 
     {
         const char *buffer = wb_receiver_get_data(rec);
