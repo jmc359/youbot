@@ -103,8 +103,8 @@ void stop()
 
 // logic for determining how much zombie(s)
 // might change per design sessions
-int calcZombiness(int g, int b){
-  return (g + b);
+float calcZombiness(int g, int b){
+  return pow(((g + b)/(255*2.0)), 10) * 100;
 }
 
 // returns index of minimum int in @array
@@ -134,6 +134,13 @@ double get_bearing_in_radians() {
   return atan2(north[0], north[2]);
 }
 
+void print(float *arr, int m, int n) 
+{ 
+    int i, j; 
+    for (i = 0; i < m; i++) 
+      for (j = 0; j < n; j++) 
+        printf("%f ", *((arr+i*n) + j)); 
+} 
 
 void robot_control(int timer)
 {
@@ -154,7 +161,7 @@ void robot_control(int timer)
     int viewpanes_horizontal = 2; // no. of horizontal panes to split view
     int image_width = 128; // standard image width
     int image_height = 64; // standard image height
-    int view_colors[viewpanes_vertical][viewpanes_horizontal];
+    float viewpanes[viewpanes_vertical][viewpanes_horizontal];
 
     
     if (timer % 16 == 0) { // n % 16 (different camera parameters now)
@@ -177,8 +184,8 @@ void robot_control(int timer)
         const double light = wb_light_sensor_get_value(13);
         printf("LGHT: %.3f\n", light);
         
-        // get image
-        const unsigned char *image = wb_camera_get_image(4);
+        // get image from camera
+        const unsigned char *image = wb_camera_get_image(6);
         
         for (int vx = 0; vx < viewpanes_vertical; vx++){
           for (int vy = 0; vy < viewpanes_horizontal; vy++){
@@ -191,62 +198,37 @@ void robot_control(int timer)
             int end_vy = (image_height/viewpanes_horizontal) * (vy + 1);
           
             // get rgb values of current pane
-            int r_avg = 0, g_avg = 0, b_avg = 0;
+            int r_sum = 0, g_sum = 0, b_sum = 0;
             for (int x = start_vx; x < end_vx; x++){
-              int r_sum = 0, g_sum = 0, b_sum = 0;
               for (int y = start_vy; y < end_vy; y++){
                 // compute rgb values of current pixel
                 r_sum += wb_camera_image_get_red(image, image_width, x, y);
                 g_sum += wb_camera_image_get_green(image, image_width, x, y);
                 b_sum += wb_camera_image_get_blue(image, image_width, x, y);
               }
-              // compute average rgb of current pane
-              r_avg = r_sum / ((end_vx - start_vx) * (end_vy - start_vy));
-              g_avg = g_sum / ((end_vx - start_vx) * (end_vy - start_vy));
-              b_avg = b_sum / ((end_vx - start_vx) * (end_vy - start_vy));
             }
-            printf("V_V=%d [start=%3d, end=%3d]; V_H=%d [start=%3d, end=%3d]; zombieness=%d\n", vx, start_vx, end_vx, vy, start_vy, end_vy, calcZombiness(g_avg, b_avg));
+            // compute average rgb of current pane
+            int total_pix = (end_vx - start_vx) * (end_vy - start_vy);
+            int r_avg = r_sum / total_pix;
+            int g_avg = g_sum / total_pix;
+            int b_avg = b_sum / total_pix;
+              
+            r_sum = 0; g_sum = 0; b_sum = 0; // reset sums
+            
+            // store 'zombieness' computation
+            viewpanes[vx][vy] = calcZombiness(g_avg, b_avg);
+            printf("V_V=%d [start=%3d, end=%3d]; V_H=%d [start=%3d, end=%3d]; zombieness=%f\n", vx, start_vx, end_vx, vy, start_vy, end_vy, viewpanes[vx][vy]);
           }
         }
-        
-        
-        /*for (int i = 0; i < viewpanes_vertical; i++) {
-            int viewfactor_vertical = image_width/viewpanes_vertical; // loss is negligent
-            int viewfactor_horizontal = image_height/viewpanes_horizontal;
-            
-            int r_sum = 0, g_sum = 0, b_sum = 0;
-            for (int x = (viewfactor_vertical * i); // start pixel of current pane
-                     x < (viewfactor_vertical * (i + 1)); // start pixel of next pane
-                     x++)
-            {
-                for (int y = (viewfactor_horizontal * i); // start pixel of current pane
-                     y < (viewfactor_horizontal * (i + 1)); // start pixel of next pane
-                     y++)
-                {
-                    r_sum += wb_camera_image_get_red(image, image_width, x, y);
-                    g_sum += wb_camera_image_get_green(image, image_width, x, y);
-                    b_sum += wb_camera_image_get_blue(image, image_width, x, y);
-                }
-                printf("y_start=%d, y_end=%d\n", (viewfactor_horizontal * i), (viewfactor_horizontal * (i + 1)));
-                
-            }
-            
-            int r_avg = r_sum / (image_width * image_height);
-            int g_avg = g_sum / (image_width * image_height);
-            int b_avg = b_sum / (image_width * image_height);
-            
-            printf("V_V=%d; V_H=%d; zombieness=%d\n", (i + 1), (i + 1), calcZombiness(g_avg, b_avg));
-            view_colors[i][i] = calcZombiness(g_avg, b_avg);
-            
-            //printf("viewpane=%d: red=%d, green=%d, blue=%d\n", (i + 1), r_avg, g_avg, b_avg);
-            //printf("viewpane=%d; zombieness=%d\n", (i + 1), calcZombiness(g_avg, b_avg));
-            //view_colors[i] = calcZombiness(g_avg, b_avg);
-        } */
         
         // compute safest route
         //int safe_pane = getIndexOfMin(view_colors, (sizeof(view_colors)/sizeof(view_colors[0])));
         //printf("safest pane=%d\n", safe_pane);
-        
+        /*float test[] = getPane(true, 1, viewpanes);
+        for (int k = 0; k < (sizeof(viewpanes)/sizeof(viewpanes[0])); k++) {
+          printf("test@k=%d --> %f=\n", k, test[k]);
+        }*/
+        print((float *)viewpanes, 2, 2);
         printf("\n"); // new line between iterations
         // next steps -- convert safest pane into angle, turn by angle --> move forward. 
     }
