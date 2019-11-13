@@ -14,14 +14,12 @@
 
 """Pedestrian class container."""
 from controller import Supervisor
-from controller import Emitter
 
 import optparse
 import math
 import random
-import struct   
 
-
+#notjing
 
 class Pedestrian (Supervisor):
     def __init__(self):
@@ -91,8 +89,8 @@ class Pedestrian (Supervisor):
         return ang
         
     def move_zombie(self, zombie_x, zombie_z, target_x, target_z):
-        move_x = ((target_x - zombie_x)/ (abs(target_x - zombie_x) + abs(target_z - zombie_z))) *0.02 #0.005
-        move_z = ((target_z - zombie_z) / (abs(target_x - zombie_x) + abs(target_z - zombie_z))) * 0.02 #0.005
+        move_x = ((target_x - zombie_x)/ (abs(target_x - zombie_x) + abs(target_z - zombie_z))) *0.005
+        move_z = ((target_z - zombie_z) / (abs(target_x - zombie_x) + abs(target_z - zombie_z))) * 0.005
         
         #print (abs(move_x) + abs(move_z))
         root_translation = [zombie_x + move_x, self.ROOT_HEIGHT + self.current_height_offset, zombie_z+move_z]
@@ -125,17 +123,11 @@ class Pedestrian (Supervisor):
         timer = 0
         self.time_step = int(self.getBasicTimeStep())
         goal = [5,5]
-
-        emitter = Emitter("emitter")
-        message = struct.pack("chd",b"g",100,120.08)
-        emitter.setChannel(-1)
-        emitter.setRange(4)
         while not self.step(self.time_step) == -1:
             self.translation = self.translationField.getSFVec3f()
             self.move_zombie(self.translation[0], self.translation[2], goal[0],goal[1])
             
-            if (timer == 16): #only change movement once every second
-                emitter.send(message)
+            if (timer == 32): #only change movement once every second
                 timer = 0
                 youbotTranslation = youbotTranslationField.getSFVec3f()
                 if (self.youbotDistance(youbotTranslation, self.translation) < 3):#if robot close, chase it
@@ -146,24 +138,8 @@ class Pedestrian (Supervisor):
                     #print ("close to robot")
                     
                 else: #choose a random spot
-                    if (random.randint(0,5) == 2): 
-                        goal = [random.randint(int(self.translation[0]) -5, int(self.translation[0]) + 5), random.randint(int(self.translation[2]) -5, int(self.translation[2]) + 5)]
-                        if (goal[0] < -12):
-                            goal[0] = -12
-                        if (goal[0] > 12):
-                            goal[0] = 12
-                        if (goal[1] < -12):
-                            goal[1] = -12
-                        if (goal[1] > 12):
-                            goal[1] = 12
-                if ((goal[0] <= -1) and (self.translation[0] > -1) and (self.translation[2] >0)):
-                    goal[0] = -0.5
-                if ((goal[0] >= -1) and (self.translation[0] < -1) and (self.translation[2] >0)):
-                    goal[0] = -1.5
-                if ((goal[1] <= -5) and (self.translation[2] > -5) and (self.translation[0] >-4)):
-                    goal[1] = -4.5
-                if ((goal[1] >= -5) and (self.translation[2] < -5) and (self.translation[0] >-4)):
-                    goal[1] = -5.5
+                    if (random.randint(0,3) == 2): 
+                        goal = [random.randint(-25,25), random.randint(-5,5)]
             timer = timer +1
 		
 
@@ -171,3 +147,90 @@ class Pedestrian (Supervisor):
 controller = Pedestrian()
 controller.random_zombie()
 
+
+
+    # def run(self):
+        # """Set the Pedestrian pose and position."""
+        # opt_parser = optparse.OptionParser()
+        # opt_parser.add_option("--trajectory", default="", help="Specify the trajectory in the format [x1 y1, x2 y2, ...]")
+        # opt_parser.add_option("--speed", type=float, default=0.5, help="Specify walking speed in [m/s]")
+        # opt_parser.add_option("--step", type=int, help="Specify time step (otherwise world time step is used)")
+        # options, args = opt_parser.parse_args()
+        # if not options.trajectory or len(options.trajectory.split(',')) < 2:
+            # print("You should specify the trajectory using the '--trajectory' option.")
+            # print("The trajectory shoulld have at least 2 points.")
+            # return
+        # if options.speed and options.speed > 0:
+            # self.speed = options.speed
+        # if options.step and options.step > 0:
+            # self.time_step = options.step
+        # else:
+            # self.time_step = int(self.getBasicTimeStep())
+        # point_list = options.trajectory.split(',')
+        # self.number_of_waypoints = len(point_list)
+        # self.waypoints = []
+        # for i in range(0, self.number_of_waypoints):
+            # self.waypoints.append([])
+            # self.waypoints[i].append(float(point_list[i].split()[0]))
+            # self.waypoints[i].append(float(point_list[i].split()[1]))
+        # self.root_node_ref = self.getSelf()
+        # self.root_translation_field = self.root_node_ref.getField("translation")
+        # self.root_rotation_field = self.root_node_ref.getField("rotation")
+        # for i in range(0, self.BODY_PARTS_NUMBER):
+            # self.joints_position_field.append(self.root_node_ref.getField(self.joint_names[i]))
+
+        # # compute waypoints distance
+        # self.waypoints_distance = []
+        # for i in range(0, self.number_of_waypoints):
+            # x = self.waypoints[i][0] - self.waypoints[(i + 1) % self.number_of_waypoints][0]
+            # z = self.waypoints[i][1] - self.waypoints[(i + 1) % self.number_of_waypoints][1]
+            # if i == 0:
+                # self.waypoints_distance.append(math.sqrt(x * x + z * z))
+            # else:
+                # self.waypoints_distance.append(self.waypoints_distance[i - 1] + math.sqrt(x * x + z * z))
+        # while not self.step(self.time_step) == -1:
+            # time = self.getTime()
+
+            # current_sequence = int(((time * self.speed) / self.CYCLE_TO_DISTANCE_RATIO) % self.WALK_SEQUENCES_NUMBER)
+            # # compute the ratio 'distance already covered between way-point(X) and way-point(X+1)'
+            # # / 'total distance between way-point(X) and way-point(X+1)'
+            # ratio = (time * self.speed) / self.CYCLE_TO_DISTANCE_RATIO - \
+                # int(((time * self.speed) / self.CYCLE_TO_DISTANCE_RATIO))
+
+            # for i in range(0, self.BODY_PARTS_NUMBER):
+                # current_angle = self.angles[i][current_sequence] * (1 - ratio) + \
+                    # self.angles[i][(current_sequence + 1) % self.WALK_SEQUENCES_NUMBER] * ratio
+                # self.joints_position_field[i].setSFFloat(current_angle)
+
+            # # adjust height
+            # self.current_height_offset = self.height_offsets[current_sequence] * (1 - ratio) + \
+                # self.height_offsets[(current_sequence + 1) % self.WALK_SEQUENCES_NUMBER] * ratio
+
+            # # move everything
+            # distance = time * self.speed
+            # relative_distance = distance - int(distance / self.waypoints_distance[self.number_of_waypoints - 1]) * \
+                # self.waypoints_distance[self.number_of_waypoints - 1]
+
+            # for i in range(0, self.number_of_waypoints):
+                # if self.waypoints_distance[i] > relative_distance:
+                    # break
+
+            # distance_ratio = 0
+            # if i == 0:
+                # distance_ratio = relative_distance / self.waypoints_distance[0]
+            # else:
+                # distance_ratio = (relative_distance - self.waypoints_distance[i - 1]) / \
+                    # (self.waypoints_distance[i] - self.waypoints_distance[i - 1])
+            # x = distance_ratio * self.waypoints[(i + 1) % self.number_of_waypoints][0] + \
+                # (1 - distance_ratio) * self.waypoints[i][0]
+            # z = distance_ratio * self.waypoints[(i + 1) % self.number_of_waypoints][1] + \
+                # (1 - distance_ratio) * self.waypoints[i][1]
+            # root_translation = [x, self.ROOT_HEIGHT + self.current_height_offset, z]
+            # angle = math.atan2(self.waypoints[(i + 1) % self.number_of_waypoints][0] - self.waypoints[i][0],
+                               # self.waypoints[(i + 1) % self.number_of_waypoints][1] - self.waypoints[i][1])
+            # rotation = [0, 1, 0, angle]
+
+            # self.root_translation_field.setSFVec3f(root_translation)
+	    # self.root_rotation_field.setSFRotation(rotation)
+          
+          
