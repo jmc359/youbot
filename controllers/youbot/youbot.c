@@ -101,14 +101,15 @@ void stop()
 ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// logic for determining how much zombie(s)
-// might change per design sessions
+// logic for determining how much zombie in frame
+// could also be used for determining 'usefulness'
+// considering berries
 float calcZombiness(int g, int b){
   return pow(((g + b)/(255*2.0)), 10) * 100;
 }
 
 // returns index of minimum int in @array
-int getIndexOfMin(int* array, size_t size){
+int getIndexOfMin(float* array, size_t size){
   int minimum = 0;
    
   for (int i = 1; i < size; i++)
@@ -117,8 +118,7 @@ int getIndexOfMin(int* array, size_t size){
          minimum = i;
   }
   return minimum;
-} // test // int temp[] = {6, 43, 2, 1, 4}; printf("minimum value %d\n", getIndexOfMin(temp, (sizeof(temp)/sizeof(temp[0]))));
-    
+} // test // int temp[] = {6, 43, 2, 1, 4}; printf("minimum value %d\n", getIndexOfMin(temp, (sizeof(temp)/sizeof(temp[0]))));   
 
 double get_bearing_in_degrees() {
   const double *north = wb_compass_get_values(3);
@@ -134,13 +134,46 @@ double get_bearing_in_radians() {
   return atan2(north[0], north[2]);
 }
 
-void print(float *arr, int m, int n) 
+void print2DArray(float *array, int m, int n) 
 { 
     int i, j; 
     for (i = 0; i < m; i++) 
       for (j = 0; j < n; j++) 
-        printf("%f ", *((arr+i*n) + j)); 
+        printf("%f ", *((array+i*n) + j)); 
 } 
+
+float** create2DArray(int c, int r)
+{
+    float* values = calloc(c * r, sizeof(float));
+    float** rows = malloc(r * sizeof(float*));
+    for (int i = 0; i < r; ++i)
+    {
+        rows[i] = values + i * c;
+    }
+    return rows;
+}
+
+int*** create3DArray(int numRows, int numCols, int numLevels)
+{
+    int ***levels;
+    levels = malloc(numLevels *sizeof(int *)); //Contains all levels
+
+    int rowIndex, levelIndex;
+
+    for (levelIndex = 0; levelIndex < numLevels; levelIndex++)
+    {
+        int **level = malloc(numRows * sizeof(int *)); //Contains all rows
+
+        for(rowIndex = 0; rowIndex < numRows; rowIndex++)
+        {
+            level[rowIndex] = malloc(numCols * sizeof(int)); //Contains all columns
+        }      
+
+        levels[levelIndex] = level;
+    }
+
+    return levels;
+}
 
 void robot_control(int timer)
 {
@@ -150,14 +183,12 @@ void robot_control(int timer)
     /////////////////////////////////////////////////////////////////////////////////////////////
   
     ////////////// TO MOVE ROBOT FORWARD AND TO STOP IT /////////////////////////////////////////
-    //go_forward();
+    go_forward();
     // stop();
     /////////////////////////////////////////////////////////////////////////////////////////////
     // printf("\f"); // clear console
     
-    go_forward();
-    
-    int viewpanes_vertical = 2; // no. of vertical panes to split view
+    int viewpanes_vertical = 3; // no. of vertical panes to split view
     int viewpanes_horizontal = 2; // no. of horizontal panes to split view
     int image_width = 128; // standard image width
     int image_height = 64; // standard image height
@@ -207,6 +238,7 @@ void robot_control(int timer)
                 b_sum += wb_camera_image_get_blue(image, image_width, x, y);
               }
             }
+            
             // compute average rgb of current pane
             int total_pix = (end_vx - start_vx) * (end_vy - start_vy);
             int r_avg = r_sum / total_pix;
@@ -221,16 +253,26 @@ void robot_control(int timer)
           }
         }
         
-        // compute safest route
-        //int safe_pane = getIndexOfMin(view_colors, (sizeof(view_colors)/sizeof(view_colors[0])));
-        //printf("safest pane=%d\n", safe_pane);
-        /*float test[] = getPane(true, 1, viewpanes);
-        for (int k = 0; k < (sizeof(viewpanes)/sizeof(viewpanes[0])); k++) {
-          printf("test@k=%d --> %f=\n", k, test[k]);
-        }*/
-        print((float *)viewpanes, 2, 2);
-        printf("\n"); // new line between iterations
-        // next steps -- convert safest pane into angle, turn by angle --> move forward. 
+        // get vertical panes only
+        float views_vertical[viewpanes_vertical];
+        for (int row = 0; row < viewpanes_vertical; row++){
+          float sum = 0;
+          for (int col = 0; col < viewpanes_horizontal; col++){
+            sum += viewpanes[row][col];
+          }
+          views_vertical[row] = sum;
+        }
+        
+        // compute safest route,
+        int safest_pane = getIndexOfMin(views_vertical, (sizeof(views_vertical)/sizeof(views_vertical[0])));
+        double safest_direction = round(((float)safest_pane/(viewpanes_vertical - 1)) * 2)/2;
+        printf("safest pane = %d, safest direction = %.1f\n", safest_pane, safest_direction);
+        
+        // determine threshold for turning
+        // example: when zombieness > 1
+        
+        // make turn
+        
     }
 }
 
@@ -289,8 +331,8 @@ int main(int argc, char **argv)
   WbDeviceTag lidar = wb_robot_get_device("lidar");
   wb_lidar_enable_point_cloud(lidar);
 
-  // RR ?? testing receiver -- see main
-  WbDeviceTag rec = wb_robot_get_device("receiver");
+  //testing receiver -- see main
+  //WbDeviceTag rec = wb_robot_get_device("receiver");
     
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
