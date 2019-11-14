@@ -175,6 +175,31 @@ int*** create3DArray(int numRows, int numCols, int numLevels)
     return levels;
 }
 
+int** color_mask(char *image, int color_min[], int color_max[], int image_width, int image_height){
+    int ** color_mask_img[image_width][image_height];
+    
+    for (int x = 0; x < image_width; x++) {
+      for (int y = 0; y < image_height; y++) {
+        int r = wb_camera_image_get_red(image, image_width, x, y);
+        int g = wb_camera_image_get_green(image, image_width, x, y);
+        int b = wb_camera_image_get_blue(image, image_width, x, y);
+        
+        int r_in_color_range = (r > color_min[0]) && (r <= color_max[0]);
+        int g_in_color_range = (g > color_min[1]) && (g <= color_max[1]);
+        int b_in_color_range = (b > color_min[2]) && (b <= color_max[2]);
+        
+        int good_color = r_in_color_range && g_in_color_range && b_in_color_range;
+        color_mask_img[x][y] = good_color;
+        
+        if (good_color == 1) {
+          printf("Good color\n");
+        }
+      }
+    }
+    
+    return color_mask_img;
+}
+
 void robot_control(int timer)
 {
     ////////////// TO ROTATE THE ROBOT (BETWEEN 0 - 345) WITH 15 DEGREE INTERVALS ///////////////
@@ -193,6 +218,21 @@ void robot_control(int timer)
     int image_width = 128; // standard image width
     int image_height = 64; // standard image height
     float viewpanes[viewpanes_vertical][viewpanes_horizontal];
+    
+    const int blue_color_min[3] = {9, 38, 93};
+    const int blue_color_max[3] = {28, 111, 198};
+    
+    const int aqua_color_min[3] = {11, 67, 68};
+    const int aqua_color_max[3] = {76, 192, 175};
+    
+    const int green_color_min[3] = {10,52,16};
+    const int green_color_max[3] = {64, 158, 68};
+    
+    const int purple_color_min[3] = {45, 24, 104};
+    const int purple_color_max[3] = {183, 82, 249};
+    
+    const int red_color_min[3] = {76, 18, 31};
+    const int red_color_max[3] = {209, 62, 44};
 
     
     if (timer % 16 == 0) { // n % 16 (different camera parameters now)
@@ -251,6 +291,7 @@ void robot_control(int timer)
             viewpanes[vx][vy] = calcZombiness(g_avg, b_avg);
             printf("V_V=%d [start=%3d, end=%3d]; V_H=%d [start=%3d, end=%3d]; zombieness=%f\n", vx, start_vx, end_vx, vy, start_vy, end_vy, viewpanes[vx][vy]);
           }
+          
         }
         
         // get vertical panes only
@@ -273,6 +314,8 @@ void robot_control(int timer)
         
         // make turn
         
+        // create blue zombie color mask
+        int** color_mask_img = color_mask(image, blue_color_min, blue_color_max, image_width, image_height);
     }
 }
 
@@ -339,27 +382,24 @@ int main(int argc, char **argv)
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   while (robot_not_dead == 1) 
   {
-
-	if (robot_info.health < 0)
+    if (robot_info.health < 0)
     {
-		robot_not_dead = 0;
-		printf("ROBOT IS OUT OF HEALTH\n");
-	}
+        robot_not_dead = 0;
+        printf("ROBOT IS OUT OF HEALTH\n");
+    }
 	
-	if (timer % 2 == 0)
-	{  
-		const double *trans = wb_supervisor_field_get_sf_vec3f(trans_field);
-		check_berry_collision(&robot_info, trans[0], trans[2]);
-		check_zombie_collision(&robot_info, trans[0], trans[2]);
-	}
+    if (timer % 2 == 0)
+    {  
+        const double *trans = wb_supervisor_field_get_sf_vec3f(trans_field);
+        check_berry_collision(&robot_info, trans[0], trans[2]);
+        check_zombie_collision(&robot_info, trans[0], trans[2]);
+    }
     if (timer == 16)
     {
         update_robot(&robot_info);
-        timer = 0;
-        
+        timer = 0; 
     }
     step();
-
     int c = keyboard(pc);
     pc = c;
     timer=timer+1;
@@ -373,16 +413,6 @@ int main(int argc, char **argv)
     robot_control(timer);
     //go_forward();
     //stop();
-
-    /* // testing receiver
-    int count = 0;
-    if (wb_receiver_get_queue_length(rec) > 0) 
-    {
-        const char *buffer = wb_receiver_get_data(rec);
-        printf("Communicating: received \"%s\"\n", buffer);
-    	 wb_receiver_next_packet(rec);
-    	 count++;
-    } printf("Receiver: %d zombies\n", count); */
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
