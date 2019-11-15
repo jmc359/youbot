@@ -190,17 +190,13 @@ int** color_mask(char *image, int color_min[], int color_max[], int image_width,
         
         int good_color = r_in_color_range && g_in_color_range && b_in_color_range;
         color_mask_img[x][y] = good_color;
-        
-        if (good_color == 1) {
-          printf("Good color\n");
-        }
       }
     }
     
     return color_mask_img;
 }
 
-double * rgb_to_hsv(int * rgb) {
+double rgb_to_hsv[](int rgb[]) {
     double red = rgb[0]/255.0;
     double blue = rgb[1]/255.0;
     double green = rgb[2]/255.0;
@@ -251,7 +247,7 @@ double * rgb_to_hsv(int * rgb) {
         saturation = delta / c_max;
         
     double value = c_max;
-    double * hsv = {hue, saturation, value}
+    double hsv = {hue, saturation, value}
     return hsv
 }
 
