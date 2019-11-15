@@ -53,14 +53,11 @@
 int robot_angle = 0;
 #define TIME_STEP 32
 
-<<<<<<< HEAD
-=======
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////// ONLY USE THE FOLLOWING FUNCTIONS TO MOVE THE ROBOT /////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
->>>>>>> 82853d782851f4f9470ca34e468a55b80416c959
 void stop()
 {
   base_reset();
@@ -77,7 +74,6 @@ void go_backward()
 }
 
 void turn_left()
-<<<<<<< HEAD
 {
   base_turn_left();
   robot_angle = robot_angle + 90;
@@ -88,18 +84,6 @@ void turn_left()
 
 void turn_right()
 {
-=======
-{
-  base_turn_left();
-  robot_angle = robot_angle + 90;
-  if (robot_angle == 360)
-    robot_angle = 0;
-
-}
-
-void turn_right()
-{
->>>>>>> 82853d782851f4f9470ca34e468a55b80416c959
   base_turn_right();  
   robot_angle = robot_angle - 90;
   if (robot_angle == -90)
@@ -150,69 +134,47 @@ double get_bearing_in_radians() {
   return atan2(north[0], north[2]);
 }
 
-int** color_mask(char *image, int color_min[], int color_max[], int image_width, int image_height){
-    int ** color_mask_img[image_width][image_height];
-    
-    for (int x = 0; x < image_width; x++) {
-      for (int y = 0; y < image_height; y++) {
-        int r = wb_camera_image_get_red(image, image_width, x, y);
-        int g = wb_camera_image_get_green(image, image_width, x, y);
-        int b = wb_camera_image_get_blue(image, image_width, x, y);
-        
-        int r_in_color_range = (r > color_min[0]) && (r <= color_max[0]);
-        int g_in_color_range = (g > color_min[1]) && (g <= color_max[1]);
-        int b_in_color_range = (b > color_min[2]) && (b <= color_max[2]);
-        
-        int good_color = r_in_color_range && g_in_color_range && b_in_color_range;
-        color_mask_img[x][y] = good_color; // ?? what does this mean? 
-        
-        if (good_color == 1) { // ?? so checking if entire image is void of certain color? 
-          printf("Good color\n");
-        }
-      }
+void print2DArray(float *array, int m, int n) 
+{ 
+    int i, j; 
+    for (i = 0; i < m; i++) 
+      for (j = 0; j < n; j++) 
+        printf("%f ", *((array+i*n) + j)); 
+} 
+
+float** create2DArray(int c, int r)
+{
+    float* values = calloc(c * r, sizeof(float));
+    float** rows = malloc(r * sizeof(float*));
+    for (int i = 0; i < r; ++i)
+    {
+        rows[i] = values + i * c;
     }
-    
-    return color_mask_img;
+    return rows;
 }
 
-// turning the robot
-void turn(int direction, int *turning, int *timesteps){
-  if ((*timesteps) == 0){
-    stop();
-    (*turning) = 1;
-    printf("TURNING: %d\n", direction);
-    switch(direction){
-      case LEFT:  turn_left(); break;
-      case RIGHT: turn_right(); break;
+int*** create3DArray(int numRows, int numCols, int numLevels)
+{
+    int ***levels;
+    levels = malloc(numLevels *sizeof(int *)); //Contains all levels
+
+    int rowIndex, levelIndex;
+
+    for (levelIndex = 0; levelIndex < numLevels; levelIndex++)
+    {
+        int **level = malloc(numRows * sizeof(int *)); //Contains all rows
+
+        for(rowIndex = 0; rowIndex < numRows; rowIndex++)
+        {
+            level[rowIndex] = malloc(numCols * sizeof(int)); //Contains all columns
+        }      
+
+        levels[levelIndex] = level;
     }
-  }
+
+    return levels;
 }
 
-// update timestep counter for turning
-void turn_update(int *turning, int *timesteps){
-  if ((*turning)){
-    if ((*timesteps) < 150){
-      (*timesteps)++;
-    }
-    else{
-      (*turning) = 0;
-      (*timesteps) = 0;
-    }
-  }
-}
-
-// translating forward/backward
-void translate(int direction, int *turning){
-  if(!(*turning)){
-    switch(direction){
-      case FORWARD:  go_forward(); break;
-      case BACKWARD: go_backward(); break;
-    }
-  }
-}
-
-<<<<<<< HEAD
-=======
 int** color_mask(char *image, int color_min[], int color_max[], int image_width, int image_height){
     int ** color_mask_img[image_width][image_height];
     
@@ -274,7 +236,6 @@ void translate(int direction, int *turning){
     }
   }
 }
->>>>>>> 82853d782851f4f9470ca34e468a55b80416c959
 
 void robot_control(int timer)
 {
@@ -310,14 +271,9 @@ void robot_control(int timer)
     
     const int red_color_min[3] = {76, 18, 31};
     const int red_color_max[3] = {209, 62, 44};
-<<<<<<< HEAD
-    
-=======
 
->>>>>>> 82853d782851f4f9470ca34e468a55b80416c959
     
     if (timer % 16 == 0) { // n % 16 (different camera parameters now)
-        
         // get GPS values
         const double *values = wb_gps_get_values(2);
         printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", values[0], values[1], values[2]);
@@ -336,7 +292,6 @@ void robot_control(int timer)
         // RR ?? get light value (aka interpolated irradiance with ?lookupTable)
         const double light = wb_light_sensor_get_value(13);
         printf("LGHT: %.3f\n", light);
-        
         
         // get image from camera
         const unsigned char *image = wb_camera_get_image(6);
@@ -399,10 +354,6 @@ void robot_control(int timer)
         
         // create blue zombie color mask
         int** color_mask_img = color_mask(image, blue_color_min, blue_color_max, image_width, image_height);
-<<<<<<< HEAD
-        
-=======
->>>>>>> 82853d782851f4f9470ca34e468a55b80416c959
     }
 }
 
@@ -469,11 +420,6 @@ int main(int argc, char **argv)
   //testing receiver -- see main
   //WbDeviceTag rec = wb_robot_get_device("receiver");
     
-  int turning = 0;
-  int timesteps = 0;
-  int direction = 0;
-  int threshold = 0;
-  
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -507,13 +453,8 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     // this is called everytime step.
-<<<<<<< HEAD
-    robot_control(timer);
-    /*translate(FORWARD, &turning);
-=======
     // robot_control(timer);
     translate(FORWARD, &turning);
->>>>>>> 82853d782851f4f9470ca34e468a55b80416c959
     if(threshold > 200){
       printf("Threshold: %d\n", threshold);
       turn(direction % 2, &turning, &timesteps);
@@ -521,11 +462,7 @@ int main(int argc, char **argv)
       threshold = 0;
     }
     threshold++;
-<<<<<<< HEAD
-    turn_update(&turning, &timesteps);*/
-=======
     turn_update(&turning, &timesteps);
->>>>>>> 82853d782851f4f9470ca34e468a55b80416c959
     //go_forward();
     //stop();
     
