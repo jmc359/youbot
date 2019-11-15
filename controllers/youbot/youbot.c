@@ -53,53 +53,53 @@
 int robot_angle = 0;
 #define TIME_STEP 32
 
-void rotate_robot(int angle)
-{
-    WbNodeRef robot_node = wb_supervisor_node_get_from_def("Youbot");
-    WbFieldRef rot_field = wb_supervisor_node_get_field(robot_node, "rotation");
-    double rotation[4];
-    if (angle == 0) { rotation[0] = 1; rotation[1] = 0; rotation[2] = 0; rotation[3] = -1.57; }
-    if (angle == 15) { rotation[0] = -0.985; rotation[1] = 0.126; rotation[2] = 0.122; rotation[3] = 1.59; }
-    if (angle == 30) { rotation[0] = -0.938; rotation[1] = 0.247; rotation[2] = 0.244; rotation[3] = 1.63; }
-    if (angle == 45) { rotation[0] = -0.866; rotation[1] = 0.355; rotation[2] = 0.352; rotation[3] = 1.71; }
-    if (angle == 60) { rotation[0] = -0.778; rotation[1] = 0.445; rotation[2] = 0.443; rotation[3] = 1.82; }
-    if (angle == 75) { rotation[0] = -0.681; rotation[1] = 0.519; rotation[2] = 0.516; rotation[3] = 1.94; }
-    if (angle == 90) { rotation[0] = -0.581; rotation[1] = 0.577; rotation[2] = 0.572; rotation[3] = 2.09; }
-    if (angle == 105) { rotation[0] = -0.48; rotation[1] = 0.621; rotation[2] = 0.619; rotation[3] = 2.24; }
-    if (angle == 120) { rotation[0] = -0.381; rotation[1] = 0.654; rotation[2] = 0.653; rotation[3] = 2.41; }
-    if (angle == 135) { rotation[0] = -0.284; rotation[1] = 0.679; rotation[2] = 0.677; rotation[3] = 2.58; }
-    if (angle == 150) { rotation[0] = -0.189; rotation[1] = 0.695; rotation[2] = 0.694; rotation[3] = 2.76; }
-    if (angle == 165) { rotation[0] = -0.095; rotation[1] = 0.704; rotation[2] = 0.704; rotation[3] = 2.95; }
-    if (angle == 180) { rotation[0] = -0.00268959; rotation[1] = 0.707126; rotation[2] = 0.707083; rotation[3] = 3.13102; }
-    if (angle == 195) { rotation[0] = 0.090; rotation[1] = 0.704; rotation[2] = 0.704; rotation[3] = -2.97; }
-    if (angle == 210) { rotation[0] = 0.183; rotation[1] = 0.695; rotation[2] = 0.695; rotation[3] = -2.78; }
-    if (angle == 225) { rotation[0] = 0.278; rotation[1] = 0.679; rotation[2] = 0.680; rotation[3] = -2.6; }
-    if (angle == 240) { rotation[0] = 0.375; rotation[1] = 0.655; rotation[2] = 0.656; rotation[3] = -2.43; }
-    if (angle == 255) { rotation[0] = 0.473; rotation[1] = 0.622; rotation[2] = 0.624; rotation[3] = -2.26; }
-    if (angle == 270) { rotation[0] = 0.574; rotation[1] = 0.578; rotation[2] = 0.580; rotation[3] = -2.10; }
-    if (angle == 285) { rotation[0] = 0.674; rotation[1] = 0.521; rotation[2] = 0.524; rotation[3] = -1.96; }
-    if (angle == 300) { rotation[0] = 0.771; rotation[1] = 0.449; rotation[2] = 0.452; rotation[3] = -1.83; }
-    if (angle == 315) { rotation[0] = 0.860; rotation[1] = 0.360; rotation[2] = 0.363; rotation[3] = -1.72; }
-    if (angle == 330) { rotation[0] = 0.933; rotation[1] = 0.254; rotation[2] = 0.257; rotation[3] = -1.64; }
-    if (angle == 345) { rotation[0] = 0.982; rotation[1] = 0.133; rotation[2] = 0.137; rotation[3] = -1.59; }
-    wb_supervisor_field_set_sf_rotation(rot_field,rotation);
-    robot_angle = angle;	
-}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////// ONLY USE THE FOLLOWING FUNCTIONS TO MOVE THE ROBOT /////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-void go_forward()
-{
-	base_forwards();
-}
 
 void stop()
 {
-	base_reset();
+  base_reset();
 }
+
+void go_forward()
+{
+  base_forwards();
+}
+
+void go_backward()
+{
+  base_backwards();
+}
+
+void turn_left()
+{
+  base_turn_left();
+  robot_angle = robot_angle + 90;
+  if (robot_angle == 360)
+    robot_angle = 0;
+
+}
+
+void turn_right()
+{
+  base_turn_right();  
+  robot_angle = robot_angle - 90;
+  if (robot_angle == -90)
+    robot_angle = 270;
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// directions for turning/translating
+#define LEFT (0)
+#define RIGHT (1)
+#define FORWARD (2)
+#define BACKWARD (3)
 
 // logic for determining how much zombie in frame
 // could also be used for determining 'usefulness'
@@ -200,6 +200,43 @@ int** color_mask(char *image, int color_min[], int color_max[], int image_width,
     return color_mask_img;
 }
 
+// Turning the robot
+void turn(int direction, int *turning, int *timesteps){
+  if ((*timesteps) == 0){
+    stop();
+    (*turning) = 1;
+    printf("TURNING: %d\n", direction);
+    switch(direction){
+      case LEFT:  turn_left(); break;
+      case RIGHT: turn_right(); break;
+    }
+  }
+}
+
+// Update timestep counter for turning
+void turn_update(int *turning, int *timesteps){
+  if ((*turning)){
+    if ((*timesteps) < 150){
+      (*timesteps)++;
+    }
+    else{
+      (*turning) = 0;
+      (*timesteps) = 0;
+    }
+  }
+}
+
+// Translating forward/backward
+void translate(int direction, int *turning){
+  if(!(*turning)){
+    printf("TRANSLATING\n");
+    switch(direction){
+      case FORWARD:  go_forward(); break;
+      case BACKWARD: go_backward(); break;
+    }
+  }
+}
+
 void robot_control(int timer)
 {
     ////////////// TO ROTATE THE ROBOT (BETWEEN 0 - 345) WITH 15 DEGREE INTERVALS ///////////////
@@ -208,17 +245,18 @@ void robot_control(int timer)
     /////////////////////////////////////////////////////////////////////////////////////////////
   
     ////////////// TO MOVE ROBOT FORWARD AND TO STOP IT /////////////////////////////////////////
-    go_forward();
+    // go_forward();
     // stop();
     /////////////////////////////////////////////////////////////////////////////////////////////
-    // printf("\f"); // clear console
     
     int viewpanes_vertical = 3; // no. of vertical panes to split view
     int viewpanes_horizontal = 2; // no. of horizontal panes to split view
     int image_width = 128; // standard image width
     int image_height = 64; // standard image height
     float viewpanes[viewpanes_vertical][viewpanes_horizontal];
-    
+
+
+    // Color mask values
     const int blue_color_min[3] = {9, 38, 93};
     const int blue_color_max[3] = {28, 111, 198};
     
@@ -374,6 +412,11 @@ int main(int argc, char **argv)
   WbDeviceTag lidar = wb_robot_get_device("lidar");
   wb_lidar_enable_point_cloud(lidar);
 
+  int turning = 0;
+  int timesteps = 0;
+  int direction = 0;
+  int threshold = 0;
+
   //testing receiver -- see main
   //WbDeviceTag rec = wb_robot_get_device("receiver");
     
@@ -410,7 +453,16 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     // this is called everytime step.
-    robot_control(timer);
+    // robot_control(timer);
+    translate(FORWARD, &turning);
+    if(threshold > 200){
+      printf("Threshold: %d\n", threshold);
+      turn(direction % 2, &turning, &timesteps);
+      direction++;
+      threshold = 0;
+    }
+    threshold++;
+    turn_update(&turning, &timesteps);
     //go_forward();
     //stop();
     
