@@ -4,7 +4,7 @@
 
 #define TIME_STEP 32
 
-double berry_pos[20][3];
+double berry_pos[40][3];
 
 /* = {
     {1.59, 0.0249509, 3.11978e-18}, //0
@@ -24,6 +24,7 @@ struct Robot
 {
   int health;
   int energy;
+  int armour;
 };
 
 char* concat(const char *s1, const char *s2)
@@ -39,7 +40,7 @@ char* concat(const char *s1, const char *s2)
 
 void get_all_berry_pos()
 {
-	for (int i=0; i<20; i++)
+	for (int i=0; i<40; i++)
 	{
 		char* str1;
 	    //char* str2;
@@ -62,31 +63,116 @@ void get_all_berry_pos()
 
 void print_health_energy(struct Robot robot_info)
 {
-  printf("HEALTH: %d, ENERGY: %d \n", robot_info.health, robot_info.energy);
+  printf("HEALTH: %d, ENERGY: %d, ARMOUR: %d \n", robot_info.health, robot_info.energy, robot_info.armour);
   
 }
 
 void berry_collision(int berry_id, struct Robot *robot_info )
 {
   char* str1;
-  //char* str2;
   char str2[10];
-  //char snum[5];
   str1 = "Berry";
-  //str2 = itoa(berry_id, snum, 10);
   sprintf(str2, "%d", berry_id);
-
   char* str3 = concat(str1, str2);
  
   WbNodeRef berry_node = wb_supervisor_node_get_from_def(str3);
   WbFieldRef berry_trans_field = wb_supervisor_node_get_field(berry_node, "translation");
   const double DESTROY[3] = { 20, 20, 20};
   wb_supervisor_field_set_sf_vec3f(berry_trans_field, DESTROY);
+
+  int secondary = 0;
+  int berry_type = 0;
+
+  if (berry_id >=0 && berry_id <=12)
+  {
+    berry_type = 1;
+  }
+    if (berry_id >=13 && berry_id <=21)
+  {
+    berry_type = 2;
+  }
+    if (berry_id >=22 && berry_id <=30)
+  {
+    berry_type = 3;
+  }
+    if (berry_id >=31 && berry_id <=39)
+  {
+    berry_type = 4;
+  }
+  srand ( time(NULL) );
+  int r = rand() ;
+    if (r % 4 == 1)
+    {
+      secondary = 1;
+    }
+
+  //printf("berry type: %d , secondary %d \n", berry_type, secondary);
   
-  robot_info->energy = robot_info->energy + 40;
+
+  if (secondary == 0) // primary effect
+  {
+    // if berry of type 1 - increase energy by 40
+    if (berry_type == 1)
+    {
+      robot_info->energy = robot_info->energy + 40;
+    }
+    //if berry of type 2 - increase health by 20
+    if (berry_type == 2)
+    {
+      robot_info->health = robot_info->health + 20;
+    }
+
+    //if berrt of type 3 - decrease energy by 20
+    if (berry_type == 3)
+    {
+      robot_info->energy = robot_info->energy - 20;
+    }
+
+    //if berry of type 4 - zombies cant take health away for a while
+    if (berry_type == 4)
+    {
+      robot_info->armour = 15;
+    }
+
+  }
+  if (secondary == 1) // secondary effect
+  {
+    // if berry of type 1 - increase health by 20
+    if (berry_type == 1)
+    {
+      robot_info->health = robot_info->health + 20;
+    }
+
+    //if berry of type 2 - decrease energy by 20
+    if (berry_type == 2)
+    {
+      robot_info->energy = robot_info->energy - 20;
+    }
+    
+    //if berrt of type 3 - zombies cant take health away for a while
+    if (berry_type == 3)
+    {
+      robot_info->armour = 15;
+    }
+    
+    //if berry of type 4 - increase energy by 40
+    if (berry_type == 4)
+    {
+      robot_info->energy = robot_info->energy + 40;
+    }
+  }
+
   if (robot_info->energy > 100)
   {
 	  robot_info->energy = 100;
+  } 
+  if (robot_info->health > 100)
+  {
+    robot_info->health = 100;
+  } 
+  if (robot_info->energy < 0)
+  {
+    robot_info->energy = 0;
   } 
 }
 
@@ -123,7 +209,7 @@ void check_zombie_collision(struct Robot *robot_info, const double robot_x, cons
 	  
 	    double distance = absolute(zombie_x - robot_x) + absolute(zombie_z - robot_z);
 	  
-	    if (distance<0.5)
+	    if ((distance<0.5) && (robot_info->armour < 1))
 	    {
 		  robot_info->health = robot_info->health-1;
 	    }
@@ -131,13 +217,14 @@ void check_zombie_collision(struct Robot *robot_info, const double robot_x, cons
 }
 void check_berry_collision(struct Robot *robot_info, const double robot_x, const double robot_z)
 {
-	for (int i =0; i< 20; i++)
+	for (int i =0; i< 40; i++)
 	{
 		double berry_x = berry_pos[i][0];
+    double berry_y = berry_pos[i][1];
 		double berry_z = berry_pos[i][2];
 		
 		double distance = absolute(berry_x - robot_x) + absolute(berry_z - robot_z);
-		if (distance < 0.38)
+		if ((distance < 0.38) && (berry_y < 0.07))
 		{
 			berry_collision(i, robot_info);
 			berry_pos[i][0] = 40;
@@ -194,16 +281,21 @@ void check_zombie_collision2(struct Robot *robot_info, const double robot_x, con
 
 void update_robot(struct Robot *robot_info)
 {
+  if (robot_info->armour > 0)
+  {
+    robot_info->armour = robot_info->armour - 1;
+  }
 	if (robot_info->energy == 0)
 	{
 		robot_info->health = robot_info->health -1;
     }
 	if (robot_info->energy > 0)
-    {
+  {
 		robot_info->energy = robot_info->energy -1;
-    }
+  }
 
-    print_health_energy(*robot_info);
+
+  print_health_energy(*robot_info);
     
 
 }
@@ -212,14 +304,14 @@ void update_robot(struct Robot *robot_info)
 
 ///////////////////////    KEYBOARD ////////////////////////////////////////// 
 
-static void display_helper_message() {
-  printf("Control commands:\n");
-  printf(" Arrows:       Move the robot\n");
-  printf(" Page Up/Down: Rotate the robot\n");
-  printf(" +/-:          (Un)grip\n");
-  printf(" Shift + arrows:   Handle the arm\n");
-  printf(" Space: Reset\n");
-}
+// static void display_helper_message() {
+//   printf("Control commands:\n");
+//   printf(" Arrows:       Move the robot\n");
+//   printf(" Page Up/Down: Rotate the robot\n");
+//   printf(" +/-:          (Un)grip\n");
+//   printf(" Shift + arrows:   Handle the arm\n");
+//   printf(" Space: Reset\n");
+// }
 
 int keyboard(int pc)
 {
