@@ -200,6 +200,61 @@ int** color_mask(char *image, int color_min[], int color_max[], int image_width,
     return color_mask_img;
 }
 
+double * rgb_to_hsv(int * rgb) {
+    double red = rgb[0]/255.0;
+    double blue = rgb[1]/255.0;
+    double green = rgb[2]/255.0;
+    
+    
+    double c_min;
+    
+    double hue;
+    double delta;
+    if (red >= blue && red >= green) {
+        if (blue <= green) {
+            c_min = blue;
+        } else {
+            c_min = green;
+        }
+        c_max = red;
+        delta = c_max - c_min;
+        hue = 60.0 * (((green - blue)/(delta)) % 6);
+    } else if (green >= red && green >= blue) {
+        if (red <= blue) {
+            c_min = red;
+        } else {
+            c_min = blue;
+        }
+        c_max = blue;
+        delta = c_max - c_min;
+        hue = 60.0 * (((blue - red)/delta) + 2);
+    }  else if (blue >= red && blue >= green) {
+        if (red <= green) {
+            c_min = red;
+        } else {
+            c_min = green;
+        }
+        c_max = green;
+        delta = c_max - c_min;
+        hue = 60.0 * (((red - green)/delta) + 4);
+    } else {
+        c_max = red;
+        c_min = red;
+        delta = c_max - c_min;
+        hue = 0.0;
+    }
+    
+    double saturation; 
+    if {red == green && red == blue) {
+        saturation = 0;
+    } else {
+        saturation = delta / c_max;
+        
+    double value = c_max;
+    double * hsv = {hue, saturation, value}
+    return hsv
+}
+
 void robot_control(int timer)
 {
     ////////////// TO ROTATE THE ROBOT (BETWEEN 0 - 345) WITH 15 DEGREE INTERVALS ///////////////
@@ -219,20 +274,31 @@ void robot_control(int timer)
     int image_height = 64; // standard image height
     float viewpanes[viewpanes_vertical][viewpanes_horizontal];
     
-    const int blue_color_min[3] = {9, 38, 93};
-    const int blue_color_max[3] = {28, 111, 198};
+    const double blue_color_min[3] = {9, 38, 93};
+    const double blue_color_max[3] = {28, 111, 198};
     
-    const int aqua_color_min[3] = {11, 67, 68};
-    const int aqua_color_max[3] = {76, 192, 175};
+    const double aqua_color_min[3] = {11, 67, 68};
+    const double aqua_color_max[3] = {76, 192, 175};
     
-    const int green_color_min[3] = {10,52,16};
-    const int green_color_max[3] = {64, 158, 68};
+    const double green_color_min[3] = {10,52,16};
+    const double green_color_max[3] = {64, 158, 68};
     
-    const int purple_color_min[3] = {45, 24, 104};
-    const int purple_color_max[3] = {183, 82, 249};
+    const double purple_color_min[3] = {45, 24, 104};
+    const double purple_color_max[3] = {183, 82, 249};
     
-    const int red_color_min[3] = {76, 18, 31};
-    const int red_color_max[3] = {209, 62, 44};
+    const double red_color_min[3] = {76, 18, 31};
+    const double red_color_max[3] = {209, 62, 44};
+    const double red_ratio_min[3] = {red_color_min[0]/red_color_min[1], 
+                                  red_color_min[1]/red_color_min[2],
+                                  red_color_min[2]/red_color_min[0]};
+    const double red_ratio_max[3] = {red_color_max[0]/red_color_max[1], 
+                                  red_color_max[1]/red_color_max[2], 
+                                  red_color_max[2]/red_color_max[0]};
+           
+    printf("red min: {%f, %f, %f}\n", red_color_min[0], red_color_min[1], red_color_min[2]);
+    printf("red max: {%f, %f, %f}\n", red_color_max[0], red_color_max[1], red_color_max[2]);
+    printf("red ratios min: {%f, %f, %f}\n", red_ratio_min[0], red_ratio_min[1], red_ratio_min[2]);
+    printf("red ratios max: {%f, %f, %f}\n", red_ratio_max[0], red_ratio_max[1], red_ratio_max[2]);
 
     
     if (timer % 16 == 0) { // n % 16 (different camera parameters now)
