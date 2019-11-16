@@ -196,7 +196,6 @@ void rotate(int direction, int *turning, int *timesteps){
   if ((*timesteps) == 0){ // Initiate turn at first timestep
     stop();
     (*turning) = 1;
-    printf("TURNING: %d %d\n", direction, *timesteps);
     switch(direction){
       case LEFT:  turn_right(); break; // **original functions are swapped**
       case RIGHT: turn_left(); break;
@@ -209,7 +208,6 @@ void rotate(int direction, int *turning, int *timesteps){
 void rotate_update(int *turning, int *timesteps){
   if ((*turning)){ 
     if ((*timesteps) < 150){ // only count when turning
-      printf("TIMESTEPS: %d\n", *timesteps);
       (*timesteps)++;
     }
     else{ // reset after waiting 150 steps
@@ -222,7 +220,6 @@ void rotate_update(int *turning, int *timesteps){
 // Translates forward/backward only if not turning
 void translate(int direction, int *turning){
   if(!(*turning)){
-    printf("Translating\n");
     switch(direction){ // Only translate when not turning
       case FORWARD:  go_forward(); break;
       case BACKWARD: go_backward(); break;
