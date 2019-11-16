@@ -196,10 +196,10 @@ void rotate(int direction, int *turning, int *timesteps){
   if ((*timesteps) == 0){ // Initiate turn at first timestep
     stop();
     (*turning) = 1;
-    printf("TURNING: %d\n", direction);
+    printf("TURNING: %d %d\n", direction, *timesteps);
     switch(direction){
-      case LEFT:  turn_left(); break;
-      case RIGHT: turn_right(); break;
+      case LEFT:  turn_right(); break; // **original functions are swapped**
+      case RIGHT: turn_left(); break;
     }
   }
 }
@@ -209,6 +209,7 @@ void rotate(int direction, int *turning, int *timesteps){
 void rotate_update(int *turning, int *timesteps){
   if ((*turning)){ 
     if ((*timesteps) < 150){ // only count when turning
+      printf("TIMESTEPS: %d\n", *timesteps);
       (*timesteps)++;
     }
     else{ // reset after waiting 150 steps
@@ -221,6 +222,7 @@ void rotate_update(int *turning, int *timesteps){
 // Translates forward/backward only if not turning
 void translate(int direction, int *turning){
   if(!(*turning)){
+    printf("Translating\n");
     switch(direction){ // Only translate when not turning
       case FORWARD:  go_forward(); break;
       case BACKWARD: go_backward(); break;
@@ -252,7 +254,7 @@ int** color_mask(char *image, int color_min[], int color_max[], int image_width,
         color_mask_img[x][y] = good_color;
         
         if (good_color == 1) {
-          printf("Good color\n");
+          // printf("Good color\n");
         }
       }
     }
@@ -267,18 +269,68 @@ float calcZombiness(int g, int b){
   return pow(((g + b)/(255*2.0)), 10) * 100;
 }
 
+// return vertical panes from image
+float *get_views_vertical(const unsigned char *image, int viewpanes_vertical, int viewpanes_horizontal, int image_width, int image_height){
+  float viewpanes[viewpanes_vertical][viewpanes_horizontal];
+  for (int vx = 0; vx < viewpanes_vertical; vx++){
+    for (int vy = 0; vy < viewpanes_horizontal; vy++){
+      // define start and end for current vertical pane
+      int start_vx = (image_width/viewpanes_vertical) * vx;
+      int end_vx = (image_width/viewpanes_vertical) * (vx + 1);
+      
+      // define start and end for current horizontal pane
+      int start_vy = (image_height/viewpanes_horizontal) * vy;
+      int end_vy = (image_height/viewpanes_horizontal) * (vy + 1);
+    
+      // get rgb values of current pane
+      int r_sum = 0, g_sum = 0, b_sum = 0;
+      for (int x = start_vx; x < end_vx; x++){
+        for (int y = start_vy; y < end_vy; y++){
+          // compute rgb values of current pixel
+          r_sum += wb_camera_image_get_red(image, image_width, x, y);
+          g_sum += wb_camera_image_get_green(image, image_width, x, y);
+          b_sum += wb_camera_image_get_blue(image, image_width, x, y);
+        }
+      }
+      
+      // compute average rgb of current pane
+      int total_pix = (end_vx - start_vx) * (end_vy - start_vy);
+      int r_avg = r_sum / total_pix;
+      int g_avg = g_sum / total_pix;
+      int b_avg = b_sum / total_pix;
+        
+      r_sum = 0; g_sum = 0; b_sum = 0; // reset sums
+      
+      // store 'zombieness' computation
+      viewpanes[vx][vy] = calcZombiness(g_avg, b_avg);
+      printf("V_V=%d [start=%3d, end=%3d]; V_H=%d [start=%3d, end=%3d]; zombieness=%f\n", vx, start_vx, end_vx, vy, start_vy, end_vy, viewpanes[vx][vy]);
+    }
+  }
+  
+  // get vertical panes only
+  float views_vertical[viewpanes_vertical];
+  for (int row = 0; row < viewpanes_vertical; row++){
+    float sum = 0;
+    for (int col = 0; col < viewpanes_horizontal; col++){
+      sum += viewpanes[row][col];
+    }
+    views_vertical[row] = sum;
+  }
+  return views_vertical;
+}
+
+
 
 /*
  * Main robot control function, called every time step
  */
-void robot_control(int timer)
+void robot_control(int timer, int *turning, int *timesteps)
 {   
+    // Variables dictating image processing
     int viewpanes_vertical = 3; // no. of vertical panes to split view
     int viewpanes_horizontal = 2; // no. of horizontal panes to split view
     int image_width = 128; // standard image width
     int image_height = 64; // standard image height
-    float viewpanes[viewpanes_vertical][viewpanes_horizontal];
-
 
     // Color mask values
     const int blue_color_min[3] = {9, 38, 93};
@@ -298,80 +350,35 @@ void robot_control(int timer)
 
     
     if (timer % 16 == 0) { // n % 16 (different camera parameters now)
-        // get GPS values
+        // get sensor values
         const double *values = wb_gps_get_values(2);
-        printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", values[0], values[1], values[2]);
-        
-        // get accelerometer values
         const double *acceleration = wb_accelerometer_get_values(1);
-        printf("ACCL: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", acceleration[0], acceleration[1], acceleration[2]);
-        
-        // get compass values
-        printf("COMP: radians = %+.3f, degrees = %+.3f\n", get_bearing_in_radians(), get_bearing_in_degrees());
-        
-        // get gyro rotation axes
         const double *vel = wb_gyro_get_values(12);
-        printf("GYRO: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", vel[0], vel[1], vel[2]);
-        
-        // RR ?? get light value (aka interpolated irradiance with ?lookupTable)
         const double light = wb_light_sensor_get_value(13);
-        printf("LGHT: %.3f\n", light);
-        
-        // get image from camera
         const unsigned char *image = wb_camera_get_image(6);
+
+        // print sensor values
+        printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", values[0], values[1], values[2]);
+        printf("ACCL: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", acceleration[0], acceleration[1], acceleration[2]);
+        printf("COMP: radians = %+.3f, degrees = %+.3f\n", get_bearing_in_radians(), get_bearing_in_degrees());
+        printf("GYRO: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", vel[0], vel[1], vel[2]);
+        printf("LGHT: %.3f\n", light); // RR ?? get light value (aka interpolated irradiance with ?lookupTable)
         
-        for (int vx = 0; vx < viewpanes_vertical; vx++){
-          for (int vy = 0; vy < viewpanes_horizontal; vy++){
-            // define start and end for current vertical pane
-            int start_vx = (image_width/viewpanes_vertical) * vx;
-            int end_vx = (image_width/viewpanes_vertical) * (vx + 1);
-            
-            // define start and end for current horizontal pane
-            int start_vy = (image_height/viewpanes_horizontal) * vy;
-            int end_vy = (image_height/viewpanes_horizontal) * (vy + 1);
-          
-            // get rgb values of current pane
-            int r_sum = 0, g_sum = 0, b_sum = 0;
-            for (int x = start_vx; x < end_vx; x++){
-              for (int y = start_vy; y < end_vy; y++){
-                // compute rgb values of current pixel
-                r_sum += wb_camera_image_get_red(image, image_width, x, y);
-                g_sum += wb_camera_image_get_green(image, image_width, x, y);
-                b_sum += wb_camera_image_get_blue(image, image_width, x, y);
-              }
-            }
-            
-            // compute average rgb of current pane
-            int total_pix = (end_vx - start_vx) * (end_vy - start_vy);
-            int r_avg = r_sum / total_pix;
-            int g_avg = g_sum / total_pix;
-            int b_avg = b_sum / total_pix;
-              
-            r_sum = 0; g_sum = 0; b_sum = 0; // reset sums
-            
-            // store 'zombieness' computation
-            viewpanes[vx][vy] = calcZombiness(g_avg, b_avg);
-            printf("V_V=%d [start=%3d, end=%3d]; V_H=%d [start=%3d, end=%3d]; zombieness=%f\n", vx, start_vx, end_vx, vy, start_vy, end_vy, viewpanes[vx][vy]);
-          }
-          
-        }
-        
-        // get vertical panes only
-        float views_vertical[viewpanes_vertical];
-        for (int row = 0; row < viewpanes_vertical; row++){
-          float sum = 0;
-          for (int col = 0; col < viewpanes_horizontal; col++){
-            sum += viewpanes[row][col];
-          }
-          views_vertical[row] = sum;
-        }
-        
-        // compute safest route,
+        // compute safest route, direction
+        float *views_vertical = get_views_vertical(image,viewpanes_vertical,viewpanes_horizontal,image_width,image_height);
         int safest_pane = getIndexOfMin(views_vertical, (sizeof(views_vertical)/sizeof(views_vertical[0])));
         double safest_direction = round(((float)safest_pane/(viewpanes_vertical - 1)) * 2)/2;
         printf("safest pane = %d, safest direction = %.1f\n", safest_pane, safest_direction);
         
-        // determine threshold for turning
+        // Basic turning logic (will be made more nuanced)
+        if (safest_pane == 0){
+          printf("ROTATING LEFT\n");
+          rotate(LEFT, turning, timesteps);
+        }
+        else if (safest_pane == 2){
+          printf("ROTATING RIGHT\n");
+          rotate(RIGHT, turning, timesteps);
+        }
         // example: when zombieness > 1
         
         // make turn
@@ -379,6 +386,8 @@ void robot_control(int timer)
         // create blue zombie color mask
         int** color_mask_img = color_mask(image, blue_color_min, blue_color_max, image_width, image_height);
     }
+    translate(FORWARD, turning);
+    rotate_update(turning, timesteps);
 }
 
 
@@ -414,7 +423,8 @@ int main(int argc, char **argv)
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
+  
+  // sensor choices
   wb_accelerometer_enable(1,1);         // test in robot_control
   wb_gps_enable(2,TIME_STEP);           // test in robot_control
   wb_compass_enable(3,TIME_STEP);       // test in robot_control
@@ -436,14 +446,12 @@ int main(int argc, char **argv)
   WbDeviceTag lidar = wb_robot_get_device("lidar");
   wb_lidar_enable_point_cloud(lidar);
 
-  // Variables dictating turning
-  int turning = 0;
-  int timesteps = 0;
-  int direction = 0;
-  int threshold = 0;
-
   //testing receiver -- see main
   //WbDeviceTag rec = wb_robot_get_device("receiver");
+
+  // Variables dictating turning
+  int turning = 0; // bool for turning
+  int timesteps = 0; // how many timesteps into current turn
     
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
@@ -477,19 +485,8 @@ int main(int argc, char **argv)
     ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
-    // this is called everytime step.
-    // robot_control(timer);
-
-    // example driver code for moving robot base
-    translate(FORWARD, &turning);
-    if(threshold > 200){
-      printf("Threshold: %d\n", threshold);
-      rotate(direction % 2, &turning, &timesteps);
-      direction++;
-      threshold = 0;
-    }
-    threshold++;
-    rotate_update(&turning, &timesteps);
+    // control function called every time step
+    robot_control(timer, &turning, &timesteps);
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
