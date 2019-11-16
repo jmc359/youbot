@@ -95,45 +95,11 @@ void turn_right()
 ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// directions for turning/translating
-#define LEFT (0)
-#define RIGHT (1)
-#define FORWARD (2)
-#define BACKWARD (3)
+/*
+ * Helper functions for printing/creating/returning min of arrays
+ */
 
-// logic for determining how much zombie in frame
-// could also be used for determining 'usefulness'
-// considering berries
-float calcZombiness(int g, int b){
-  return pow(((g + b)/(255*2.0)), 10) * 100;
-}
-
-// returns index of minimum int in @array
-int getIndexOfMin(float* array, size_t size){
-  int minimum = 0;
-   
-  for (int i = 1; i < size; i++)
-  {
-      if (array[i] < array[minimum])
-         minimum = i;
-  }
-  return minimum;
-} // test // int temp[] = {6, 43, 2, 1, 4}; printf("minimum value %d\n", getIndexOfMin(temp, (sizeof(temp)/sizeof(temp[0]))));   
-
-double get_bearing_in_degrees() {
-  const double *north = wb_compass_get_values(3);
-  double rad = atan2(north[0], north[2]);
-  double bearing = (rad - 1.5708) / M_PI * 180.0;
-  if (bearing < 0.0)
-    bearing = bearing + 360.0;
-  return bearing;
-}
-
-double get_bearing_in_radians() {
-  const double *north = wb_compass_get_values(3);
-  return atan2(north[0], north[2]);
-}
-
+// prints 2d float array
 void print2DArray(float *array, int m, int n) 
 { 
     int i, j; 
@@ -142,6 +108,7 @@ void print2DArray(float *array, int m, int n)
         printf("%f ", *((array+i*n) + j)); 
 } 
 
+// creates 2d float array
 float** create2DArray(int c, int r)
 {
     float* values = calloc(c * r, sizeof(float));
@@ -153,6 +120,7 @@ float** create2DArray(int c, int r)
     return rows;
 }
 
+// creates 3d int array
 int*** create3DArray(int numRows, int numCols, int numLevels)
 {
     int ***levels;
@@ -175,6 +143,98 @@ int*** create3DArray(int numRows, int numCols, int numLevels)
     return levels;
 }
 
+// returns index of minimum int in @array
+int getIndexOfMin(float* array, size_t size){
+  int minimum = 0;
+   
+  for (int i = 1; i < size; i++)
+  {
+      if (array[i] < array[minimum])
+         minimum = i;
+  }
+  return minimum;
+}
+
+
+
+/*
+ * Functions for getting bearing of robot
+ */
+
+// returns heading in [0, 360] degree range
+double get_bearing_in_degrees() {
+  const double *north = wb_compass_get_values(3);
+  double rad = atan2(north[0], north[2]);
+  double bearing = (rad - 1.5708) / M_PI * 180.0;
+  if (bearing < 0.0)
+    bearing = bearing + 360.0;
+  return bearing;
+}
+
+// returns heading in [-1.57, 1.57] radian range
+double get_bearing_in_radians() {
+  const double *north = wb_compass_get_values(3);
+  return atan2(north[0], north[2]);
+}
+
+
+
+/*
+ * Functions and definitions for moving the robot base
+ */
+
+// defined directions for rotating/translating
+#define LEFT (0)
+#define RIGHT (1)
+#define FORWARD (2)
+#define BACKWARD (3)
+
+// Initiates turning the robot
+// rotate_update() waits the proper amount of time
+// after this function is called
+void rotate(int direction, int *turning, int *timesteps){
+  if ((*timesteps) == 0){ // Initiate turn at first timestep
+    stop();
+    (*turning) = 1;
+    printf("TURNING: %d\n", direction);
+    switch(direction){
+      case LEFT:  turn_left(); break;
+      case RIGHT: turn_right(); break;
+    }
+  }
+}
+
+// Updates timestep counter for turning after turn is initiated
+// Updates counter if and only if the robot is in the process of turning
+void rotate_update(int *turning, int *timesteps){
+  if ((*turning)){ 
+    if ((*timesteps) < 150){ // only count when turning
+      (*timesteps)++;
+    }
+    else{ // reset after waiting 150 steps
+      (*turning) = 0;
+      (*timesteps) = 0;
+    }
+  }
+}
+
+// Translates forward/backward only if not turning
+void translate(int direction, int *turning){
+  if(!(*turning)){
+    switch(direction){ // Only translate when not turning
+      case FORWARD:  go_forward(); break;
+      case BACKWARD: go_backward(); break;
+    }
+  }
+}
+
+
+
+/*
+ * Functions for image processing (masking/zombiness/etc.)
+ */
+
+// function for returning color masked image given input color range and rgb image
 int** color_mask(char *image, int color_min[], int color_max[], int image_width, int image_height){
     int ** color_mask_img[image_width][image_height];
     
@@ -200,55 +260,19 @@ int** color_mask(char *image, int color_min[], int color_max[], int image_width,
     return color_mask_img;
 }
 
-// Turning the robot
-void turn(int direction, int *turning, int *timesteps){
-  if ((*timesteps) == 0){
-    stop();
-    (*turning) = 1;
-    printf("TURNING: %d\n", direction);
-    switch(direction){
-      case LEFT:  turn_left(); break;
-      case RIGHT: turn_right(); break;
-    }
-  }
+// logic for determining how much zombie in frame
+// could also be used for determining 'usefulness'
+// considering berries
+float calcZombiness(int g, int b){
+  return pow(((g + b)/(255*2.0)), 10) * 100;
 }
 
-// Update timestep counter for turning
-void turn_update(int *turning, int *timesteps){
-  if ((*turning)){
-    if ((*timesteps) < 150){
-      (*timesteps)++;
-    }
-    else{
-      (*turning) = 0;
-      (*timesteps) = 0;
-    }
-  }
-}
 
-// Translating forward/backward
-void translate(int direction, int *turning){
-  if(!(*turning)){
-    printf("TRANSLATING\n");
-    switch(direction){
-      case FORWARD:  go_forward(); break;
-      case BACKWARD: go_backward(); break;
-    }
-  }
-}
-
+/*
+ * Main robot control function, called every time step
+ */
 void robot_control(int timer)
-{
-    ////////////// TO ROTATE THE ROBOT (BETWEEN 0 - 345) WITH 15 DEGREE INTERVALS ///////////////
-    //rotate_robot(45);
-    //rotate_robot(255);
-    /////////////////////////////////////////////////////////////////////////////////////////////
-  
-    ////////////// TO MOVE ROBOT FORWARD AND TO STOP IT /////////////////////////////////////////
-    // go_forward();
-    // stop();
-    /////////////////////////////////////////////////////////////////////////////////////////////
-    
+{   
     int viewpanes_vertical = 3; // no. of vertical panes to split view
     int viewpanes_horizontal = 2; // no. of horizontal panes to split view
     int image_width = 128; // standard image width
@@ -412,6 +436,7 @@ int main(int argc, char **argv)
   WbDeviceTag lidar = wb_robot_get_device("lidar");
   wb_lidar_enable_point_cloud(lidar);
 
+  // Variables dictating turning
   int turning = 0;
   int timesteps = 0;
   int direction = 0;
@@ -454,17 +479,17 @@ int main(int argc, char **argv)
     
     // this is called everytime step.
     // robot_control(timer);
+
+    // example driver code for moving robot base
     translate(FORWARD, &turning);
     if(threshold > 200){
       printf("Threshold: %d\n", threshold);
-      turn(direction % 2, &turning, &timesteps);
+      rotate(direction % 2, &turning, &timesteps);
       direction++;
       threshold = 0;
     }
     threshold++;
-    turn_update(&turning, &timesteps);
-    //go_forward();
-    //stop();
+    rotate_update(&turning, &timesteps);
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
