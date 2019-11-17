@@ -155,8 +155,6 @@ int getIndexOfMin(float* array, size_t size){
   return minimum;
 }
 
-
-
 /*
  * Functions for getting bearing of robot
  */
@@ -176,8 +174,6 @@ double get_bearing_in_radians() {
   const double *north = wb_compass_get_values(3);
   return atan2(north[0], north[2]);
 }
-
-
 
 /*
  * Functions and definitions for moving the robot base
@@ -226,8 +222,6 @@ void translate(int direction, int *turning){
     }
   }
 }
-
-
 
 /*
  * Functions for image processing (masking/zombiness/etc.)
@@ -316,12 +310,22 @@ float *get_views_vertical(const unsigned char *image, int viewpanes_vertical, in
   return views_vertical;
 }
 
+// RR - this need more testing... 
+float sumOfArray(float a[], int n) {
+  float sum = 0;
 
+  for(int i = 0; i < n; i++) {
+    sum += a[i];
+    printf("@i=%d, a[i]=%f, sum=%f\n", i, a[i], sum); // hm... uncomment this and you get a different sum...
+  }
+  
+  return sum;
+}
 
 /*
  * Main robot control function, called every time step
  */
-void robot_control(int timer, int *turning, int *timesteps)
+void robot_control(int timer, int *turning, int *timesteps, float threshold)
 {   
     // Variables dictating image processing
     int viewpanes_vertical = 3; // no. of vertical panes to split view
@@ -365,23 +369,23 @@ void robot_control(int timer, int *turning, int *timesteps)
         float *views_vertical = get_views_vertical(image,viewpanes_vertical,viewpanes_horizontal,image_width,image_height);
         int safest_pane = getIndexOfMin(views_vertical, (sizeof(views_vertical)/sizeof(views_vertical[0])));
         double safest_direction = round(((float)safest_pane/(viewpanes_vertical - 1)) * 2)/2;
-        printf("safest pane = %d, safest direction = %.1f\n", safest_pane, safest_direction);
-        
-        // Basic turning logic (will be made more nuanced)
-        if (safest_pane == 0){
-          printf("ROTATING LEFT\n");
-          rotate(LEFT, turning, timesteps);
-        }
-        else if (safest_pane == 2){
-          printf("ROTATING RIGHT\n");
-          rotate(RIGHT, turning, timesteps);
-        }
-        // example: when zombieness > 1
+        float zombieness = sumOfArray(&views_vertical[safest_pane], (sizeof(views_vertical)/sizeof(views_vertical[0])));
+        printf("safest pane = %d, safest direction = %.1f, zombieness = %.4f\n", safest_pane, safest_direction, zombieness);
         
         // make turn
+        if (zombieness > threshold) {
+          if (safest_direction == 0){
+            printf("ROTATING LEFT\n");
+            rotate(LEFT, turning, timesteps);
+          }
+          else if (safest_direction == 1){
+            printf("ROTATING RIGHT\n");
+            rotate(RIGHT, turning, timesteps);
+          }
+        }
         
         // create blue zombie color mask
-        int** color_mask_img = color_mask(image, blue_color_min, blue_color_max, image_width, image_height);
+        // int** color_mask_img = color_mask(image, blue_color_min, blue_color_max, image_width, image_height);
     }
     translate(FORWARD, turning);
     rotate_update(turning, timesteps);
@@ -449,6 +453,7 @@ int main(int argc, char **argv)
   // Variables dictating turning
   int turning = 0; // bool for turning
   int timesteps = 0; // how many timesteps into current turn
+  float threshold = 0.5; // threshold for initiating turn
     
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
@@ -483,7 +488,7 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     // control function called every time step
-    robot_control(timer, &turning, &timesteps);
+    robot_control(timer, &turning, &timesteps, threshold);
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
