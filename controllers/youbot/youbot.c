@@ -226,31 +226,139 @@ void translate(int direction, int *turning){
 /*
  * Functions for image processing (masking/zombiness/etc.)
  */
+ 
+ 
+#define BLUE 0
+#define AQUA 1
+#define GREEN 2
+#define PURPLE 3
+#define RED 4
+#define PINK 5
+#define ORANGE 6
+#define YELLOW 7
+
+static int min_colors[8][3] = {{10, 39, 97}, {11, 67, 68}, {10, 52, 16}, {45, 18, 92},
+                               {76, 18, 31}, {62, 38, 67}, {62, 38, 32}, {69, 67, 13}};
+static int max_colors[8][3] = {{28, 111, 198}, {76, 192, 175}, {64, 158, 68}, {115, 49, 185},
+                               {209, 62, 44}, {193, 124, 167}, {194, 124, 85}, {207, 195, 37}};
 
 // function for returning color masked image given input color range and rgb image
-int** color_mask(char *image, int color_min[], int color_max[], int image_width, int image_height){
-    int ** color_mask_img[image_width][image_height];
+void rgb_to_hsv(int rgb[], double *hsv) {
+    double red = rgb[0]/255.0;
+    double green = rgb[1]/255.0;
+    double blue = rgb[2]/255.0;
+
+    double c_max = 0;
+    double c_min = 0;
+    double delta = c_max - c_min;
+    double hue, saturation, value;
+
+    if (red >= blue && red >= green) {
+        c_max = red;
+    } else if (green >= red && green >= blue) {
+        c_max = green;
+    } else if (blue >= red && blue >= green) {
+        c_max = blue;
+    }
+
+    if (red <= blue && red <= green) {
+        c_min = red;
+    } else if (green <= red && green <= blue) {
+        c_min = green;
+    } else if (blue <= red && blue <= green) {
+        c_min = blue;
+    }
+
+    delta = c_max - c_min;
+
+    if (c_max == red) {
+        hue = (green - blue)/delta;
+    } else if (c_max == green) {
+        hue = 2 + (blue - red) / delta;
+    } else if (c_max == blue) {
+        hue = 4 + (red - green) / delta;
+    } else {
+        hue = 0;
+    }
+
+    hue *= 60;
+    if (hue < 0) {
+        hue += 360;
+    }
+
+    if (c_max == 0) {
+        saturation = 0;
+    } else {
+        saturation = 100 * delta / c_max;
+    }
+
+    value = 100 * c_max;
+
+    hsv[0] = hue;
+    hsv[1] = saturation;
+    hsv[2] = value;
+}
+
+int color_mask_count(const unsigned char *image, int color, int image_width, int image_height) {
+    double epsilon = 5.0;
+    double hue_epsilon = 5.0;
+    
+    double hsv_min[3];
+    rgb_to_hsv(min_colors[color], hsv_min);
+    double hsv_max[3];
+    rgb_to_hsv(max_colors[color], hsv_max);
+
+    int mask_pixels = 0;
+    int min_x = 0;
+    int max_x = 0;
+    int min_y = 0;
+    int max_y = 0;
+    
+    FILE *file_pointer;
+    file_pointer = fopen("image_mask.txt", "w");
+    
+    // fprintf(file_pointer, "%d,%d", image_height, image_width);
     
     for (int x = 0; x < image_width; x++) {
       for (int y = 0; y < image_height; y++) {
         int r = wb_camera_image_get_red(image, image_width, x, y);
         int g = wb_camera_image_get_green(image, image_width, x, y);
         int b = wb_camera_image_get_blue(image, image_width, x, y);
+
+        int rgb[3] = {r, g, b};
+        double hsv[3];
+        rgb_to_hsv(rgb, hsv);
         
-        int r_in_color_range = (r > color_min[0]) && (r <= color_max[0]);
-        int g_in_color_range = (g > color_min[1]) && (g <= color_max[1]);
-        int b_in_color_range = (b > color_min[2]) && (b <= color_max[2]);
+        int h_valid_low = abs(hsv_min[0] - hsv[0])%360 < hue_epsilon;
+        int h_valid_high = abs(hsv_max[0] - hsv[0])%360 < hue_epsilon;
         
-        int good_color = r_in_color_range && g_in_color_range && b_in_color_range;
-        color_mask_img[x][y] = good_color;
+        int s_valid_low = abs(hsv_min[1] - hsv[1]) < epsilon;
+        int s_valid_high = abs(hsv_max[1] - hsv[1]) < epsilon;
         
-        if (good_color == 1) {
-          // printf("Good color\n");
+        int v_valid_low = abs(hsv_min[2] - hsv[2]) < epsilon;
+        int v_valid_high = abs(hsv_max[2] - hsv[2]) < epsilon;
+
+
+        int found_color = (h_valid_low || h_valid_high) &&
+                          (s_valid_low || s_valid_high) &&
+                          (v_valid_low || v_valid_high);
+        mask_pixels += found_color;
+        
+        if (y == 0) {
+            fprintf(file_pointer, "%d", found_color);
+
+        } else {
+            fprintf(file_pointer, ",%d", found_color);
         }
       }
+      fprintf(file_pointer, "\n");
     }
     
-    return color_mask_img;
+    printf("x range: {%d, %d}\n", min_x, max_x);
+    printf("y range: {%d, %d}\n", min_y, max_y);
+    
+    fclose(file_pointer);
+    return mask_pixels;
 }
 
 // logic for determining how much zombie in frame
@@ -331,24 +439,8 @@ void robot_control(int timer, int *turning, int *timesteps, float threshold,
     // Variables dictating image processing
     int viewpanes_vertical = 3; // no. of vertical panes to split view
     int viewpanes_horizontal = 2; // no. of horizontal panes to split view
-    int image_width = 128; // standard image width
-    int image_height = 64; // standard image height
-
-    // Color mask values
-    const int blue_color_min[3] = {9, 38, 93};
-    const int blue_color_max[3] = {28, 111, 198};
-    
-    const int aqua_color_min[3] = {11, 67, 68};
-    const int aqua_color_max[3] = {76, 192, 175};
-    
-    const int green_color_min[3] = {10,52,16};
-    const int green_color_max[3] = {64, 158, 68};
-    
-    const int purple_color_min[3] = {45, 24, 104};
-    const int purple_color_max[3] = {183, 82, 249};
-    
-    const int red_color_min[3] = {76, 18, 31};
-    const int red_color_max[3] = {209, 62, 44};
+    int image_width = 256; // standard image width
+    int image_height = 128; // standard image height
 
     
     if (timer % 16 == 0) { // n % 16 (different camera parameters now)
@@ -358,6 +450,10 @@ void robot_control(int timer, int *turning, int *timesteps, float threshold,
         const double *vel = wb_gyro_get_values(12);
         const double light = wb_light_sensor_get_value(13);
         const unsigned char *image = wb_camera_get_image(6);
+        
+        // Print # of pixels matching color
+        int mask_pixels = color_mask_count(image, ORANGE, image_width, image_height);
+        printf("Mask pixels: %d\n", mask_pixels);
 
         // print sensor values
         printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", values[0], values[1], values[2]);
