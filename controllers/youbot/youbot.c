@@ -325,7 +325,8 @@ float sumOfArray(float a[], int n) {
 /*
  * Main robot control function, called every time step
  */
-void robot_control(int timer, int *turning, int *timesteps, float threshold)
+void robot_control(int timer, int *turning, int *timesteps, float threshold,
+                   struct Robot last, struct Robot current)
 {   
     // Variables dictating image processing
     int viewpanes_vertical = 3; // no. of vertical panes to split view
@@ -454,6 +455,9 @@ int main(int argc, char **argv)
   int turning = 0; // bool for turning
   int timesteps = 0; // how many timesteps into current turn
   float threshold = 0.5; // threshold for initiating turn
+
+  // robot health and info
+  struct Robot last_info = {100,100};
     
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
@@ -488,8 +492,10 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     // control function called every time step
-    robot_control(timer, &turning, &timesteps, threshold);
-    
+    robot_control(timer, &turning, &timesteps, threshold, last_info, robot_info);
+    last_info.health = robot_info.health;
+    last_info.energy = robot_info.energy;
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
