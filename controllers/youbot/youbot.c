@@ -242,7 +242,6 @@ static int min_colors[8][3] = {{10, 39, 97}, {11, 67, 68}, {10, 52, 16}, {45, 18
 static int max_colors[8][3] = {{28, 111, 198}, {76, 192, 175}, {64, 158, 68}, {115, 49, 185},
                                {209, 62, 44}, {193, 124, 167}, {194, 124, 85}, {207, 195, 37}};
 
-// function for returning color masked image given input color range and rgb image
 void rgb_to_hsv(int rgb[], double *hsv) {
     double red = rgb[0]/255.0;
     double green = rgb[1]/255.0;
@@ -299,9 +298,20 @@ void rgb_to_hsv(int rgb[], double *hsv) {
     hsv[2] = value;
 }
 
-int color_mask_count(const unsigned char *image, int color, int image_width, int image_height) {
+// function computing whether given hsv value is close to given value
+int in_range(double *hsv, double *hsv_compare, double epsilon)
+{
+    int h_valid = abs(hsv_compare[0] - hsv[0])%360 < epsilon;    
+    int s_valid = abs(hsv_compare[1] - hsv[1]) < epsilon;    
+    int v_valid = abs(hsv_compare[2] - hsv[2]) < epsilon;
+
+    int color_in_range = (h_valid) && (s_valid) && (v_valid);
+    return color_in_range;
+}
+
+// function for counting matching colored pixels in image given input color range and rgb image
+int color_mask_count(const unsigned char *image, int color, int image_width, int image_height, int save_mask) {
     double epsilon = 5.0;
-    double hue_epsilon = 5.0;
     
     double hsv_min[3];
     rgb_to_hsv(min_colors[color], hsv_min);
@@ -309,55 +319,47 @@ int color_mask_count(const unsigned char *image, int color, int image_width, int
     rgb_to_hsv(max_colors[color], hsv_max);
 
     int mask_pixels = 0;
-    int min_x = 0;
-    int max_x = 0;
-    int min_y = 0;
-    int max_y = 0;
     
-    FILE *file_pointer;
-    file_pointer = fopen("image_mask.txt", "w");
+    FILE *file_pointer = NULL;
+    if (save_mask) {
+      file_pointer = fopen("image_mask.txt", "w");
+    }
     
     // fprintf(file_pointer, "%d,%d", image_height, image_width);
     
     for (int x = 0; x < image_width; x++) {
-      for (int y = 0; y < image_height; y++) {
-        int r = wb_camera_image_get_red(image, image_width, x, y);
-        int g = wb_camera_image_get_green(image, image_width, x, y);
-        int b = wb_camera_image_get_blue(image, image_width, x, y);
-
-        int rgb[3] = {r, g, b};
-        double hsv[3];
-        rgb_to_hsv(rgb, hsv);
+        for (int y = 0; y < image_height; y++) {
+            int r = wb_camera_image_get_red(image, image_width, x, y);
+            int g = wb_camera_image_get_green(image, image_width, x, y);
+            int b = wb_camera_image_get_blue(image, image_width, x, y);
+    
+            int rgb[3] = {r, g, b};
+            double hsv[3];
+            rgb_to_hsv(rgb, hsv);
+            
+            int in_range_min = in_range(hsv, hsv_min, epsilon);
+            int in_range_max = in_range(hsv, hsv_max, epsilon);
+            int found_color = in_range_min || in_range_max;
+            mask_pixels += found_color;
+            
+            if (save_mask) {
+                if (y == 0) {
+                    fprintf(file_pointer, "%d", found_color);
         
-        int h_valid_low = abs(hsv_min[0] - hsv[0])%360 < hue_epsilon;
-        int h_valid_high = abs(hsv_max[0] - hsv[0])%360 < hue_epsilon;
-        
-        int s_valid_low = abs(hsv_min[1] - hsv[1]) < epsilon;
-        int s_valid_high = abs(hsv_max[1] - hsv[1]) < epsilon;
-        
-        int v_valid_low = abs(hsv_min[2] - hsv[2]) < epsilon;
-        int v_valid_high = abs(hsv_max[2] - hsv[2]) < epsilon;
-
-
-        int found_color = (h_valid_low || h_valid_high) &&
-                          (s_valid_low || s_valid_high) &&
-                          (v_valid_low || v_valid_high);
-        mask_pixels += found_color;
-        
-        if (y == 0) {
-            fprintf(file_pointer, "%d", found_color);
-
-        } else {
-            fprintf(file_pointer, ",%d", found_color);
+                } else {
+                    fprintf(file_pointer, ",%d", found_color);
+                }
+            }
         }
-      }
-      fprintf(file_pointer, "\n");
+        if (save_mask) {
+          fprintf(file_pointer, "\n");
+        }
     }
     
-    printf("x range: {%d, %d}\n", min_x, max_x);
-    printf("y range: {%d, %d}\n", min_y, max_y);
     
-    fclose(file_pointer);
+    if (save_mask) {
+      fclose(file_pointer);
+    }
     return mask_pixels;
 }
 
@@ -452,7 +454,7 @@ void robot_control(int timer, int *turning, int *timesteps, float threshold,
         const unsigned char *image = wb_camera_get_image(6);
         
         // Print # of pixels matching color
-        int mask_pixels = color_mask_count(image, ORANGE, image_width, image_height);
+        int mask_pixels = color_mask_count(image, ORANGE, image_width, image_height, 1);
         printf("Mask pixels: %d\n", mask_pixels);
 
         // print sensor values
@@ -480,9 +482,6 @@ void robot_control(int timer, int *turning, int *timesteps, float threshold,
             rotate(RIGHT, turning, timesteps);
           }
         }
-        
-        // create blue zombie color mask
-        // int** color_mask_img = color_mask(image, blue_color_min, blue_color_max, image_width, image_height);
     }
     translate(FORWARD, turning);
     rotate_update(turning, timesteps);
