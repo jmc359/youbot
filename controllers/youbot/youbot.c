@@ -227,7 +227,6 @@ void translate(int direction, int *turning){
  * Functions for image processing (masking/zombiness/etc.)
  */
  
- 
 #define BLUE 0
 #define AQUA 1
 #define GREEN 2
@@ -431,6 +430,8 @@ float sumOfArray(float a[], int n) {
   
   return sum;
 }
+
+
 
 /*
  * Main robot control function, called every time step
