@@ -4,12 +4,18 @@
 
 ## TODO 
 - basic zombie avoidance behavior
-- ~~image processing~~ RR 13-Nov
+- image processing
 - wall detection and avoidance
 - global berry map
 - avoiding zombies based on color
 - using the gripper
 
-## Immediate Next Steps
-- making a turn and then continue moving forward in `robot_control` according to value of `safest_direction`
-- how can we move forward, stop, rotate, move forward without exploding?
+# Zombie Survival
+
+## Description
+Design of a controller for a robot to survive a harsh, challenging simulated world for as long as possible.
+
+## Lambda (5) Team
+- Rebecca Ramnauth, [rebecca.ramnauth@yale.edu](mailto:rebecca.ramnauth@yale.edu)
+- Sydney Thompson, [sydney.thompson@yale.edu](sydney.thompson@yale.edu)
+- Joe Connolly, [joe.connolly@yale.edu], (joe.connolly@yale.edu)
