@@ -2,4 +2,4 @@
 *.wbproj
 *.DS_STORE
 *build
-*controllers/youbot/build
+*controllers/youbot/build/*
