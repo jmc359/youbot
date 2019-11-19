@@ -144,10 +144,10 @@ int*** create3DArray(int numRows, int numCols, int numLevels)
 }
 
 // returns index of minimum int in @array
-int getIndexOfMin(float* array, size_t size){
+int getIndexOfMin(float* array, int size){
   int minimum = 0;
-   
-  for (int i = 1; i < size; i++)
+
+  for (int i = 0; i < size; i++)
   {
       if (array[i] < array[minimum])
          minimum = i;
@@ -362,6 +362,39 @@ int color_mask_count(const unsigned char *image, int color, int image_width, int
     return mask_pixels;
 }
 
+void color_mask_image(const unsigned char *image, int color, int image_height, int image_width, int mask_image[image_height][image_width]) {
+    double epsilon = 5.0;
+    
+    double hsv_min[3];
+    rgb_to_hsv(min_colors[color], hsv_min);
+    double hsv_max[3];
+    rgb_to_hsv(max_colors[color], hsv_max);
+       
+    for (int x = 0; x < image_width; x++) {
+        for (int y = 0; y < image_height; y++) {
+            int r = wb_camera_image_get_red(image, image_width, x, y);
+            int g = wb_camera_image_get_green(image, image_width, x, y);
+            int b = wb_camera_image_get_blue(image, image_width, x, y);
+    
+            int rgb[3] = {r, g, b};
+            double hsv[3];
+            rgb_to_hsv(rgb, hsv);
+            
+            int in_range_min = in_range(hsv, hsv_min, epsilon);
+            int in_range_max = in_range(hsv, hsv_max, epsilon);
+            int found_color = in_range_min || in_range_max;
+            if (found_color != 1 && found_color != 0) {
+                printf("Found color {%d, %d}: %d", x, y, found_color);
+            }
+            mask_image[x][y] = found_color;
+            
+            if (mask_image[x][y] != 1 && mask_image[x][y] != 0) {
+                printf("Not matching - {%d, %d}", x, y);
+            }
+        }
+    }
+}
+
 // logic for determining how much zombie in frame
 // could also be used for determining 'usefulness'
 // considering berries
@@ -408,7 +441,58 @@ float *get_views_vertical(const unsigned char *image, int viewpanes_vertical, in
   }
   
   // get vertical panes only
-  float views_vertical[viewpanes_vertical];
+  float *views_vertical = malloc(sizeof(float) * viewpanes_vertical);
+  // float views_vertical[viewpanes_vertical];
+  for (int row = 0; row < viewpanes_vertical; row++){
+    float sum = 0;
+    for (int col = 0; col < viewpanes_horizontal; col++){
+      sum += viewpanes[row][col];
+    }
+    views_vertical[row] = sum;
+  }
+  return views_vertical;
+}
+
+// return vertical panes from image
+float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal, int image_width, int image_height, int mask_array[image_width][image_height]){
+  float viewpanes[viewpanes_vertical][viewpanes_horizontal];
+  for (int vx = 0; vx < viewpanes_vertical; vx++){
+    for (int vy = 0; vy < viewpanes_horizontal; vy++){
+      // define start and end for current vertical pane
+      int start_vx = (image_width/viewpanes_vertical) * vx;
+      int end_vx = (image_width/viewpanes_vertical) * (vx + 1);
+      
+      // define start and end for current horizontal pane
+      int start_vy = (image_height/viewpanes_horizontal) * vy;
+      int end_vy = (image_height/viewpanes_horizontal) * (vy + 1);
+    
+      // get sum of active pixels in mask
+      int mask_sum = 0;
+      for (int x = start_vx; x < end_vx; x++){
+        for (int y = start_vy; y < end_vy; y++){
+          // compute rgb values of current pixel
+            mask_sum += mask_array[x][y];
+            // if (mask_sum != 1 && mask_sum != 0) {
+                // printf("mask_array[%d][%d]: %d\n", x, y, mask_array[x][y]);
+            // }
+        }
+      }
+      
+      // compute average rgb of current pane
+      int total_pix = (end_vx - start_vx) * (end_vy - start_vy);
+      int mask_avg = mask_sum / total_pix;
+      printf("V_V=%d [start=%3d, end=%3d]; V_H=%d [start=%3d, end=%3d]; mask sum=%d; zombieness=%f\n", vx, start_vx, end_vx, vy, start_vy, end_vy, mask_sum, mask_avg);
+      mask_sum = 0;
+            
+      // store 'zombieness' computation
+      viewpanes[vx][vy] = mask_avg;
+      // printf("V_V=%d [start=%3d, end=%3d]; V_H=%d [start=%3d, end=%3d]; zombieness=%f\n", vx, start_vx, end_vx, vy, start_vy, end_vy, viewpanes[vx][vy]);
+    }
+  }
+  
+  // get vertical panes only
+  float *views_vertical = malloc(sizeof(float) * viewpanes_vertical);
+  // float views_vertical[viewpanes_vertical];
   for (int row = 0; row < viewpanes_vertical; row++){
     float sum = 0;
     for (int col = 0; col < viewpanes_horizontal; col++){
@@ -455,8 +539,10 @@ void robot_control(int timer, int *turning, int *timesteps, float threshold,
         const unsigned char *image = wb_camera_get_image(6);
         
         // Print # of pixels matching color
-        int mask_pixels = color_mask_count(image, ORANGE, image_width, image_height, 1);
-        printf("Mask pixels: %d\n", mask_pixels);
+        // int mask_pixels = color_mask_count(image, ORANGE, image_width, image_height, 1);
+        // printf("Mask pixels: %d\n", mask_pixels);
+        int mask_image[image_height][image_width];
+        color_mask_image(image, BLUE, image_width, image_height, mask_image);
 
         // print sensor values
         printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", values[0], values[1], values[2]);
@@ -466,13 +552,16 @@ void robot_control(int timer, int *turning, int *timesteps, float threshold,
         printf("LGHT: %.3f\n", light); // RR ?? get light value (aka interpolated irradiance with ?lookupTable)
         
         // compute safest route, direction
-        float *views_vertical = get_views_vertical(image,viewpanes_vertical,viewpanes_horizontal,image_width,image_height);
-        int safest_pane = getIndexOfMin(views_vertical, (sizeof(views_vertical)/sizeof(views_vertical[0])));
+        // float *views_vertical = get_views_vertical(image,viewpanes_vertical,viewpanes_horizontal,image_width,image_height);
+        float *views_vertical = get_views_vertical_mask(viewpanes_vertical,viewpanes_horizontal,image_width,image_height, mask_image);
+        int safest_pane = getIndexOfMin(views_vertical, viewpanes_vertical); // (sizeof(views_vertical)/sizeof(views_vertical[0])));
         double safest_direction = round(((float)safest_pane/(viewpanes_vertical - 1)) * 2)/2;
         float zombieness = sumOfArray(&views_vertical[safest_pane], (sizeof(views_vertical)/sizeof(views_vertical[0])));
         printf("safest pane = %d, safest direction = %.1f, zombieness = %.4f\n", safest_pane, safest_direction, zombieness);
+        free(views_vertical);
         
         // make turn
+        printf("checking thresholds\n");
         if (zombieness > threshold) {
           if (safest_direction == 0){
             printf("ROTATING LEFT\n");
