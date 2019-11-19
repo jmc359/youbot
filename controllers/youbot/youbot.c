@@ -300,7 +300,7 @@ void rgb_to_hsv(int rgb[], double *hsv) {
 // function computing whether given hsv value is close to given value
 int in_range(double *hsv, double *hsv_compare, double epsilon)
 {
-    int h_valid = abs(hsv_compare[0] - hsv[0])%360 < epsilon;    
+    int h_valid = abs((int)hsv_compare[0] - (int)hsv[0])%360 < epsilon;    
     int s_valid = abs(hsv_compare[1] - hsv[1]) < epsilon;    
     int v_valid = abs(hsv_compare[2] - hsv[2]) < epsilon;
 
@@ -428,7 +428,7 @@ float *get_views_vertical(const unsigned char *image, int viewpanes_vertical, in
       
       // compute average rgb of current pane
       int total_pix = (end_vx - start_vx) * (end_vy - start_vy);
-      int r_avg = r_sum / total_pix;
+      // int r_avg = r_sum / total_pix;
       int g_avg = g_sum / total_pix;
       int b_avg = b_sum / total_pix;
         
