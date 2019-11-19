@@ -99,50 +99,6 @@ void turn_right()
  * Helper functions for printing/creating/returning min of arrays
  */
 
-// prints 2d float array
-void print2DArray(float *array, int m, int n) 
-{ 
-    int i, j; 
-    for (i = 0; i < m; i++) 
-      for (j = 0; j < n; j++) 
-        printf("%f ", *((array+i*n) + j)); 
-} 
-
-// creates 2d float array
-float** create2DArray(int c, int r)
-{
-    float* values = calloc(c * r, sizeof(float));
-    float** rows = malloc(r * sizeof(float*));
-    for (int i = 0; i < r; ++i)
-    {
-        rows[i] = values + i * c;
-    }
-    return rows;
-}
-
-// creates 3d int array
-int*** create3DArray(int numRows, int numCols, int numLevels)
-{
-    int ***levels;
-    levels = malloc(numLevels *sizeof(int *)); //Contains all levels
-
-    int rowIndex, levelIndex;
-
-    for (levelIndex = 0; levelIndex < numLevels; levelIndex++)
-    {
-        int **level = malloc(numRows * sizeof(int *)); //Contains all rows
-
-        for(rowIndex = 0; rowIndex < numRows; rowIndex++)
-        {
-            level[rowIndex] = malloc(numCols * sizeof(int)); //Contains all columns
-        }      
-
-        levels[levelIndex] = level;
-    }
-
-    return levels;
-}
-
 // returns index of minimum int in @array
 int getIndexOfMin(float* array, size_t size){
   int minimum = 0;
@@ -241,6 +197,20 @@ static int min_colors[8][3] = {{10, 39, 97}, {11, 67, 68}, {10, 52, 16}, {45, 18
 static int max_colors[8][3] = {{28, 111, 198}, {76, 192, 175}, {64, 158, 68}, {115, 49, 185},
                                {209, 62, 44}, {193, 124, 167}, {194, 124, 85}, {207, 195, 37}};
 
+// calculate how unlike gray given rgb values are
+double grayDeviation(int r, int g, int b){
+  double red = r/255.0;
+  double green = g/255.0;
+  double blue = b/255.0;
+  
+  double avg = (red + green + blue)/3; // calculate mean
+  double sum = // calculate sum of squared differences
+    pow(avg - red, 2) 
+  + pow(avg - green, 2) 
+  + pow(avg - blue, 2); 
+  return sqrt(sum); // return standard deviation
+}
+
 void rgb_to_hsv(int rgb[], double *hsv) {
     double red = rgb[0]/255.0;
     double green = rgb[1]/255.0;
@@ -300,9 +270,9 @@ void rgb_to_hsv(int rgb[], double *hsv) {
 // function computing whether given hsv value is close to given value
 int in_range(double *hsv, double *hsv_compare, double epsilon)
 {
-    int h_valid = abs(hsv_compare[0] - hsv[0])%360 < epsilon;    
-    int s_valid = abs(hsv_compare[1] - hsv[1]) < epsilon;    
-    int v_valid = abs(hsv_compare[2] - hsv[2]) < epsilon;
+    int h_valid = abs((int)hsv_compare[0] - (int)hsv[0])%360 < epsilon;     
+    int s_valid = fabs(hsv_compare[1] - hsv[1]) < epsilon;    
+    int v_valid = fabs(hsv_compare[2] - hsv[2]) < epsilon;
 
     int color_in_range = (h_valid) && (s_valid) && (v_valid);
     return color_in_range;
@@ -369,6 +339,29 @@ float calcZombiness(int g, int b){
   return pow(((g + b)/(255*2.0)), 10) * 100;
 }
 
+bool isStuck(int r, int g, int b){
+  // float score = 0;
+  double stuckness = grayDeviation(r, g, b);
+  if (stuckness < 0.05) { // currently an arbitrary threshold
+    // potentially approaching a 'stuck' situation (e.g., wall, trunk, world edge)
+    // score += 1;
+    return true;
+  }
+  return false;
+  
+  /* // can extend to calculating safety
+  double average = (r + g + b)/3;
+  int zombie_values = 0;
+  if (((average - r/255.0)/stuckness) > 1.5) zombie_values += 1;
+  if (((average - g/255.0)/stuckness) > 1.5) zombie_values += 1;
+  if (((average - b/255.0)/stuckness) > 1.5) zombie_values += 1;
+  
+  if (zombie_values == 2 || b > 50) { // if zombie is of exactly two colors or blue is present
+    score += 1;
+  }
+  */
+}
+
 // return vertical panes from image
 float *get_views_vertical(const unsigned char *image, int viewpanes_vertical, int viewpanes_horizontal, int image_width, int image_height){
   float viewpanes[viewpanes_vertical][viewpanes_horizontal];
@@ -403,6 +396,7 @@ float *get_views_vertical(const unsigned char *image, int viewpanes_vertical, in
       
       // store 'zombieness' computation
       viewpanes[vx][vy] = calcZombiness(g_avg, b_avg);
+      // calcSafety(r_avg, g_avg, b_avg);
       printf("V_V=%d [start=%3d, end=%3d]; V_H=%d [start=%3d, end=%3d]; zombieness=%f\n", vx, start_vx, end_vx, vy, start_vy, end_vy, viewpanes[vx][vy]);
     }
   }
@@ -419,19 +413,17 @@ float *get_views_vertical(const unsigned char *image, int viewpanes_vertical, in
   return views_vertical;
 }
 
-// RR - this need more testing... 
+// get sum of all elements in array
 float sumOfArray(float a[], int n) {
   float sum = 0;
 
   for(int i = 0; i < n; i++) {
     sum += a[i];
-    printf("@i=%d, a[i]=%f, sum=%f\n", i, a[i], sum); // hm... uncomment this and you get a different sum...
+    //printf("@i=%d, a[i]=%f, sum=%f\n", i, a[i], sum); // hm... uncomment this and you get a different sum...
   }
   
   return sum;
 }
-
-
 
 /*
  * Main robot control function, called every time step
@@ -463,7 +455,7 @@ void robot_control(int timer, int *turning, int *timesteps, float threshold,
         printf("ACCL: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", acceleration[0], acceleration[1], acceleration[2]);
         printf("COMP: radians = %+.3f, degrees = %+.3f\n", get_bearing_in_radians(), get_bearing_in_degrees());
         printf("GYRO: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", vel[0], vel[1], vel[2]);
-        printf("LGHT: %.3f\n", light); // RR ?? get light value (aka interpolated irradiance with ?lookupTable)
+        printf("LGHT: %.3f\n", light); 
         
         // compute safest route, direction
         float *views_vertical = get_views_vertical(image,viewpanes_vertical,viewpanes_horizontal,image_width,image_height);
@@ -550,7 +542,7 @@ int main(int argc, char **argv)
   // Variables dictating turning
   int turning = 0; // bool for turning
   int timesteps = 0; // how many timesteps into current turn
-  float threshold = 0.5; // threshold for initiating turn
+  float threshold = 0.3; // threshold for initiating turn
 
   // robot health and info
   struct Robot last_info = {100,100};
