@@ -100,12 +100,12 @@ void turn_right()
  */
 
 // prints 2d float array
-void print2DArray(float *array, int m, int n) 
+void print2DArray(int *array, int m, int n) 
 { 
     int i, j; 
     for (i = 0; i < m; i++) 
       for (j = 0; j < n; j++) 
-        printf("%f ", *((array+i*n) + j)); 
+        printf("%d ", *((array+i*n) + j)); 
 } 
 
 // creates 2d float array
@@ -362,7 +362,7 @@ int color_mask_count(const unsigned char *image, int color, int image_width, int
     return mask_pixels;
 }
 
-void color_mask_image(const unsigned char *image, int color, int image_height, int image_width, int mask_image[image_height][image_width]) {
+void color_mask_image(const unsigned char *image, int color, int image_width, int image_height, int mask_image[image_width][image_height]) {
     double epsilon = 5.0;
     
     double hsv_min[3];
@@ -480,7 +480,7 @@ float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal,
       
       // compute average rgb of current pane
       int total_pix = (end_vx - start_vx) * (end_vy - start_vy);
-      int mask_avg = mask_sum / total_pix;
+      float mask_avg = (float)mask_sum / total_pix;
       printf("V_V=%d [start=%3d, end=%3d]; V_H=%d [start=%3d, end=%3d]; mask sum=%d; zombieness=%f\n", vx, start_vx, end_vx, vy, start_vy, end_vy, mask_sum, mask_avg);
       mask_sum = 0;
             
@@ -541,9 +541,9 @@ void robot_control(int timer, int *turning, int *timesteps, float threshold,
         // Print # of pixels matching color
         // int mask_pixels = color_mask_count(image, ORANGE, image_width, image_height, 1);
         // printf("Mask pixels: %d\n", mask_pixels);
-        int mask_image[image_height][image_width];
+        int mask_image[image_width][image_height];
         color_mask_image(image, BLUE, image_width, image_height, mask_image);
-
+        
         // print sensor values
         printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", values[0], values[1], values[2]);
         printf("ACCL: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", acceleration[0], acceleration[1], acceleration[2]);

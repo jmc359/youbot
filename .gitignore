@@ -3,3 +3,8 @@
 *.DS_STORE
 *build
 *controllers/youbot/build/*
+
+controllers/youbot/build/release/youbot.d
+controllers/youbot/build/release/youbot.o
+controllers/youbot/youbot
+
