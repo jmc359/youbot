@@ -15,8 +15,7 @@
 ## Description
 Design of a controller for a robot to survive a harsh, challenging simulated world for as long as possible.
 
-## Team
-**Lambda, #5** members: 
-- [Rebecca Ramnauth](http://rramnauth2220.github.io/), AKW 507, [rebecca.ramnauth@yale.edu](mailto:rebecca.ramnauth@yale.edu)
-- Sydney Thompson
-- Joe Connolly
+## Lambda (5) Team
+- Rebecca Ramnauth, [rebecca.ramnauth@yale.edu](mailto:rebecca.ramnauth@yale.edu)
+- Sydney Thompson, [sydney.thompson@yale.edu](sydney.thompson@yale.edu)
+- Joe Connolly, [joe.connolly@yale.edu], (joe.connolly@yale.edu)
