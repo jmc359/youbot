@@ -301,8 +301,8 @@ void rgb_to_hsv(int rgb[], double *hsv) {
 int in_range(double *hsv, double *hsv_compare, double epsilon)
 {
     int h_valid = abs((int)hsv_compare[0] - (int)hsv[0])%360 < epsilon;    
-    int s_valid = abs(hsv_compare[1] - hsv[1]) < epsilon;    
-    int v_valid = abs(hsv_compare[2] - hsv[2]) < epsilon;
+    int s_valid = fabs(hsv_compare[1] - hsv[1]) < epsilon;    
+    int v_valid = fabs(hsv_compare[2] - hsv[2]) < epsilon;
 
     int color_in_range = (h_valid) && (s_valid) && (v_valid);
     return color_in_range;
