@@ -16,15 +16,21 @@ Design of a controller for a robot to survive a harsh, challenging simulated wor
 
 ## Moving Mechanisms
 Functions and definitions for moving the robot base
-- `translate()`
-- `main()` --> `robot_control()`, describe parameters
-- `robot_control()` --> `if(timer % 16 == 0)`
+- `translate()` - Joe?
+- `main()` &larr; `robot_control()`, parameters
+    - `timer`, a variable local to `main()` that is defined outside of `robot_control` so that it does not reset every time step
+    - `turning` - Joe?
+    - `timesteps` - Joe?
+    - `threshold`, a safety threshold for initiating turn; because turning is time consuming, it should be used sparsely and decivisely
+    - `last_info` - Joe?
+    - `robot_info` - Joe?
+- `robot_control()` &larr; `if(timer % 16 == 0)`, initiates camera captures and processing every other time step.
 
 ## Turning Mechanisms
 Functions and definitions for turning the robot base
-- `rotate()`
-- `rotate_update()`
-- `robot_control()` --> performing turn
+- `rotate()` - Joe?
+- `rotate_update()` - Joe?
+- `robot_control()` &larr; performing turn
 ```c
 // ... 
     if (zombieness > threshold) { // does calculated safety level warrant a turn?
@@ -47,19 +53,29 @@ Functions and definitions for interpreting raw images taken of the local environ
 
 ### Color Processing
 - `grayDeviation()`
-- `rgb_to_hsv()`
-- `in_range()`
-- `color_mask_count()`
+    - returns how unlike gray a given rgb value is, the standard deviation of the `r`, `g`, and `b` values
+    - can be implemented as a detector of 'stuck' situations. For example, the edge of the world is gray, a tree trunk/stump is black, and a wall can be any shade of gray depending on light source angling
+- `rgb_to_hsv()` - Sydney?
+- `in_range()` - Sydney?
+- `color_mask_count()` - Sydney?
 
 ### Whole-Image Processing
 - `get_views_vertical()`
+    - splits a given camera image into a `viewpanes_horizontal` by `viewpanes_vertical` grid
+    - currently implemented to split the image into vertical panes and evaluate safety per pane
+    - improvements include: (i) calculating an incentive score, which considers berries according the robot's current `last.health` or `last.energy`, (ii) assessing horizontal panes for tree trunk/stump and berry detection, (iii) optimizing color classification methods such as using grayscaling or other color spaces
 
 ## Determining Safety
 Functions and definitions for evaluating the safety of the local environment
-- `grayDeviation()`
 - `calcZombiness()`
+   - returns a calculation of how much 'zombieness' based on given frame's green and blue values
+   - `pow(((g + b)/(255*2.0)), 10) * 100` is the sum of the green and blue values divided by the maximum green + blue value (255 * 2), then the result is magnified by a power of 10
+   - an improved 'zombieness' calculator would classify a zombie by the peak in exactly two `r`, `g`, or `b` values
+   - an even improved calculator would classify the zombie by its true color and movement/turning mechanisms could be alternate per case
 - `isStuck()`
-- `robot_control()` --> computing safest route
+   - returns a `bool` of whether the robot is approaching a potential 'stuck' situation (i.e., wall, tree, world edge)
+   - can be a factor for safety evaluation of current frame that can be prioritized alongside zombie detection
+- `robot_control()` &larr; computing safest route
 ```c
 // split view into vertical panes and evaluate safety for each pane
 float *views_vertical = get_views_vertical(image,viewpanes_vertical,viewpanes_horizontal,image_width,image_height);
@@ -94,7 +110,6 @@ Helper methods for tests and aforementioned processes
     - usage is similar to that of `get_bearing_in_degrees()`
     - however, currently implemented as a test for the compass sensor because of world 3 revised turning specification, see `get_bearing_in_degrees()`
  
-
 ## Further Steps
 
 ## Lambda (5) Team
