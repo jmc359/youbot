@@ -99,55 +99,11 @@ void turn_right()
  * Helper functions for printing/creating/returning min of arrays
  */
 
-// prints 2d float array
-void print2DArray(int *array, int m, int n) 
-{ 
-    int i, j; 
-    for (i = 0; i < m; i++) 
-      for (j = 0; j < n; j++) 
-        printf("%d ", *((array+i*n) + j)); 
-} 
-
-// creates 2d float array
-float** create2DArray(int c, int r)
-{
-    float* values = calloc(c * r, sizeof(float));
-    float** rows = malloc(r * sizeof(float*));
-    for (int i = 0; i < r; ++i)
-    {
-        rows[i] = values + i * c;
-    }
-    return rows;
-}
-
-// creates 3d int array
-int*** create3DArray(int numRows, int numCols, int numLevels)
-{
-    int ***levels;
-    levels = malloc(numLevels *sizeof(int *)); //Contains all levels
-
-    int rowIndex, levelIndex;
-
-    for (levelIndex = 0; levelIndex < numLevels; levelIndex++)
-    {
-        int **level = malloc(numRows * sizeof(int *)); //Contains all rows
-
-        for(rowIndex = 0; rowIndex < numRows; rowIndex++)
-        {
-            level[rowIndex] = malloc(numCols * sizeof(int)); //Contains all columns
-        }      
-
-        levels[levelIndex] = level;
-    }
-
-    return levels;
-}
-
 // returns index of minimum int in @array
-int getIndexOfMin(float* array, int size){
+int getIndexOfMin(float* array, size_t size){
   int minimum = 0;
-
-  for (int i = 0; i < size; i++)
+   
+  for (int i = 1; i < size; i++)
   {
       if (array[i] < array[minimum])
          minimum = i;
@@ -241,6 +197,20 @@ static int min_colors[8][3] = {{10, 39, 97}, {11, 67, 68}, {10, 52, 16}, {45, 18
 static int max_colors[8][3] = {{28, 111, 198}, {76, 192, 175}, {64, 158, 68}, {115, 49, 185},
                                {209, 62, 44}, {193, 124, 167}, {194, 124, 85}, {207, 195, 37}};
 
+// calculate how unlike gray given rgb values are
+double grayDeviation(int r, int g, int b){
+  double red = r/255.0;
+  double green = g/255.0;
+  double blue = b/255.0;
+  
+  double avg = (red + green + blue)/3; // calculate mean
+  double sum = // calculate sum of squared differences
+    pow(avg - red, 2) 
+  + pow(avg - green, 2) 
+  + pow(avg - blue, 2); 
+  return sqrt(sum); // return standard deviation
+}
+
 void rgb_to_hsv(int rgb[], double *hsv) {
     double red = rgb[0]/255.0;
     double green = rgb[1]/255.0;
@@ -300,7 +270,7 @@ void rgb_to_hsv(int rgb[], double *hsv) {
 // function computing whether given hsv value is close to given value
 int in_range(double *hsv, double *hsv_compare, double epsilon)
 {
-    int h_valid = abs((int)hsv_compare[0] - (int)hsv[0])%360 < epsilon;    
+    int h_valid = abs((int)hsv_compare[0] - (int)hsv[0])%360 < epsilon;     
     int s_valid = fabs(hsv_compare[1] - hsv[1]) < epsilon;    
     int v_valid = fabs(hsv_compare[2] - hsv[2]) < epsilon;
 
@@ -362,44 +332,34 @@ int color_mask_count(const unsigned char *image, int color, int image_width, int
     return mask_pixels;
 }
 
-void color_mask_image(const unsigned char *image, int color, int image_width, int image_height, int mask_image[image_width][image_height]) {
-    double epsilon = 5.0;
-    
-    double hsv_min[3];
-    rgb_to_hsv(min_colors[color], hsv_min);
-    double hsv_max[3];
-    rgb_to_hsv(max_colors[color], hsv_max);
-       
-    for (int x = 0; x < image_width; x++) {
-        for (int y = 0; y < image_height; y++) {
-            int r = wb_camera_image_get_red(image, image_width, x, y);
-            int g = wb_camera_image_get_green(image, image_width, x, y);
-            int b = wb_camera_image_get_blue(image, image_width, x, y);
-    
-            int rgb[3] = {r, g, b};
-            double hsv[3];
-            rgb_to_hsv(rgb, hsv);
-            
-            int in_range_min = in_range(hsv, hsv_min, epsilon);
-            int in_range_max = in_range(hsv, hsv_max, epsilon);
-            int found_color = in_range_min || in_range_max;
-            if (found_color != 1 && found_color != 0) {
-                printf("Found color {%d, %d}: %d", x, y, found_color);
-            }
-            mask_image[x][y] = found_color;
-            
-            if (mask_image[x][y] != 1 && mask_image[x][y] != 0) {
-                printf("Not matching - {%d, %d}", x, y);
-            }
-        }
-    }
-}
-
 // logic for determining how much zombie in frame
 // could also be used for determining 'usefulness'
 // considering berries
 float calcZombiness(int g, int b){
   return pow(((g + b)/(255*2.0)), 10) * 100;
+}
+
+bool isStuck(int r, int g, int b){
+  // float score = 0;
+  double stuckness = grayDeviation(r, g, b);
+  if (stuckness < 0.05) { // currently an arbitrary threshold
+    // potentially approaching a 'stuck' situation (e.g., wall, trunk, world edge)
+    // score += 1;
+    return true;
+  }
+  return false;
+  
+  /* // can extend to calculating safety
+  double average = (r + g + b)/3;
+  int zombie_values = 0;
+  if (((average - r/255.0)/stuckness) > 1.5) zombie_values += 1;
+  if (((average - g/255.0)/stuckness) > 1.5) zombie_values += 1;
+  if (((average - b/255.0)/stuckness) > 1.5) zombie_values += 1;
+  
+  if (zombie_values == 2 || b > 50) { // if zombie is of exactly two colors or blue is present
+    score += 1;
+  }
+  */
 }
 
 // return vertical panes from image
@@ -428,7 +388,7 @@ float *get_views_vertical(const unsigned char *image, int viewpanes_vertical, in
       
       // compute average rgb of current pane
       int total_pix = (end_vx - start_vx) * (end_vy - start_vy);
-      // int r_avg = r_sum / total_pix;
+      int r_avg = r_sum / total_pix;
       int g_avg = g_sum / total_pix;
       int b_avg = b_sum / total_pix;
         
@@ -436,13 +396,13 @@ float *get_views_vertical(const unsigned char *image, int viewpanes_vertical, in
       
       // store 'zombieness' computation
       viewpanes[vx][vy] = calcZombiness(g_avg, b_avg);
+      // calcSafety(r_avg, g_avg, b_avg);
       printf("V_V=%d [start=%3d, end=%3d]; V_H=%d [start=%3d, end=%3d]; zombieness=%f\n", vx, start_vx, end_vx, vy, start_vy, end_vy, viewpanes[vx][vy]);
     }
   }
   
   // get vertical panes only
-  float *views_vertical = malloc(sizeof(float) * viewpanes_vertical);
-  // float views_vertical[viewpanes_vertical];
+  float views_vertical[viewpanes_vertical];
   for (int row = 0; row < viewpanes_vertical; row++){
     float sum = 0;
     for (int col = 0; col < viewpanes_horizontal; col++){
@@ -453,69 +413,17 @@ float *get_views_vertical(const unsigned char *image, int viewpanes_vertical, in
   return views_vertical;
 }
 
-// return vertical panes from image
-float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal, int image_width, int image_height, int mask_array[image_width][image_height]){
-  float viewpanes[viewpanes_vertical][viewpanes_horizontal];
-  for (int vx = 0; vx < viewpanes_vertical; vx++){
-    for (int vy = 0; vy < viewpanes_horizontal; vy++){
-      // define start and end for current vertical pane
-      int start_vx = (image_width/viewpanes_vertical) * vx;
-      int end_vx = (image_width/viewpanes_vertical) * (vx + 1);
-      
-      // define start and end for current horizontal pane
-      int start_vy = (image_height/viewpanes_horizontal) * vy;
-      int end_vy = (image_height/viewpanes_horizontal) * (vy + 1);
-    
-      // get sum of active pixels in mask
-      int mask_sum = 0;
-      for (int x = start_vx; x < end_vx; x++){
-        for (int y = start_vy; y < end_vy; y++){
-          // compute rgb values of current pixel
-            mask_sum += mask_array[x][y];
-            // if (mask_sum != 1 && mask_sum != 0) {
-                // printf("mask_array[%d][%d]: %d\n", x, y, mask_array[x][y]);
-            // }
-        }
-      }
-      
-      // compute average rgb of current pane
-      int total_pix = (end_vx - start_vx) * (end_vy - start_vy);
-      float mask_avg = (float)mask_sum / total_pix;
-      printf("V_V=%d [start=%3d, end=%3d]; V_H=%d [start=%3d, end=%3d]; mask sum=%d; zombieness=%f\n", vx, start_vx, end_vx, vy, start_vy, end_vy, mask_sum, mask_avg);
-      mask_sum = 0;
-            
-      // store 'zombieness' computation
-      viewpanes[vx][vy] = mask_avg;
-      // printf("V_V=%d [start=%3d, end=%3d]; V_H=%d [start=%3d, end=%3d]; zombieness=%f\n", vx, start_vx, end_vx, vy, start_vy, end_vy, viewpanes[vx][vy]);
-    }
-  }
-  
-  // get vertical panes only
-  float *views_vertical = malloc(sizeof(float) * viewpanes_vertical);
-  // float views_vertical[viewpanes_vertical];
-  for (int row = 0; row < viewpanes_vertical; row++){
-    float sum = 0;
-    for (int col = 0; col < viewpanes_horizontal; col++){
-      sum += viewpanes[row][col];
-    }
-    views_vertical[row] = sum;
-  }
-  return views_vertical;
-}
-
-// RR - this need more testing... 
+// get sum of all elements in array
 float sumOfArray(float a[], int n) {
   float sum = 0;
 
   for(int i = 0; i < n; i++) {
     sum += a[i];
-    printf("@i=%d, a[i]=%f, sum=%f\n", i, a[i], sum); // hm... uncomment this and you get a different sum...
+    //printf("@i=%d, a[i]=%f, sum=%f\n", i, a[i], sum); // hm... uncomment this and you get a different sum...
   }
   
   return sum;
 }
-
-
 
 /*
  * Main robot control function, called every time step
@@ -539,29 +447,24 @@ void robot_control(int timer, int *turning, int *timesteps, float threshold,
         const unsigned char *image = wb_camera_get_image(6);
         
         // Print # of pixels matching color
-        // int mask_pixels = color_mask_count(image, ORANGE, image_width, image_height, 1);
-        // printf("Mask pixels: %d\n", mask_pixels);
-        int mask_image[image_width][image_height];
-        color_mask_image(image, BLUE, image_width, image_height, mask_image);
-        
+        int mask_pixels = color_mask_count(image, ORANGE, image_width, image_height, 1);
+        printf("Mask pixels: %d\n", mask_pixels);
+
         // print sensor values
         printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", values[0], values[1], values[2]);
         printf("ACCL: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", acceleration[0], acceleration[1], acceleration[2]);
         printf("COMP: radians = %+.3f, degrees = %+.3f\n", get_bearing_in_radians(), get_bearing_in_degrees());
         printf("GYRO: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", vel[0], vel[1], vel[2]);
-        printf("LGHT: %.3f\n", light); // RR ?? get light value (aka interpolated irradiance with ?lookupTable)
+        printf("LGHT: %.3f\n", light); 
         
         // compute safest route, direction
-        // float *views_vertical = get_views_vertical(image,viewpanes_vertical,viewpanes_horizontal,image_width,image_height);
-        float *views_vertical = get_views_vertical_mask(viewpanes_vertical,viewpanes_horizontal,image_width,image_height, mask_image);
-        int safest_pane = getIndexOfMin(views_vertical, viewpanes_vertical); // (sizeof(views_vertical)/sizeof(views_vertical[0])));
+        float *views_vertical = get_views_vertical(image,viewpanes_vertical,viewpanes_horizontal,image_width,image_height);
+        int safest_pane = getIndexOfMin(views_vertical, (sizeof(views_vertical)/sizeof(views_vertical[0])));
         double safest_direction = round(((float)safest_pane/(viewpanes_vertical - 1)) * 2)/2;
         float zombieness = sumOfArray(&views_vertical[safest_pane], (sizeof(views_vertical)/sizeof(views_vertical[0])));
         printf("safest pane = %d, safest direction = %.1f, zombieness = %.4f\n", safest_pane, safest_direction, zombieness);
-        free(views_vertical);
         
         // make turn
-        printf("checking thresholds\n");
         if (zombieness > threshold) {
           if (safest_direction == 0){
             printf("ROTATING LEFT\n");
@@ -639,7 +542,7 @@ int main(int argc, char **argv)
   // Variables dictating turning
   int turning = 0; // bool for turning
   int timesteps = 0; // how many timesteps into current turn
-  float threshold = 0.5; // threshold for initiating turn
+  float threshold = 0.3; // threshold for initiating turn
 
   // robot health and info
   struct Robot last_info = {100,100};
@@ -654,7 +557,7 @@ int main(int argc, char **argv)
         robot_not_dead = 0;
         printf("ROBOT IS OUT OF HEALTH\n");
     }
-	
+  
     if (timer % 2 == 0)
     {  
         const double *trans = wb_supervisor_field_get_sf_vec3f(trans_field);
