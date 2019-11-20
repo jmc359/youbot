@@ -1,5 +1,5 @@
 # Youbot Zombie Survival
-**Repository for CPSC 472/572 Robot Design Project**
+**Repository for CPSC 472/572 Robot Design Project**.
 Design of a controller for a robot to survive a harsh, challenging simulated world for as long as possible. For more information, see [world specifications](https://drive.google.com/file/d/1__hUKDCFwzRBgdBKmZmqddVbdgGxMGK4/view?usp=sharing).
 
 **Contents**
