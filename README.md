@@ -1,36 +1,35 @@
-# Youbot
+# Youbot Zombie Survival
 **Repository for CPSC 472/572 Robot Design Project**
---------------
-
-## TODO 
-- **code documentation**: for each function, write a sentence description, the parameters, and what the function returns
-- basic zombie avoidance behavior
-- image processing
-- wall detection and avoidance
-- global berry map
-- avoiding zombies based on color
-- using the gripper
-
-# Zombie Survival
 Design of a controller for a robot to survive a harsh, challenging simulated world for as long as possible. For more information, see [world specifications](https://drive.google.com/file/d/1__hUKDCFwzRBgdBKmZmqddVbdgGxMGK4/view?usp=sharing).
+
+**Contents**
+1. [Moving Mechanisms](https://github.com/jmc359/youbot#moving-mechanisms)
+2. [Turning Mechanisms](https://github.com/jmc359/youbot#turning-mechanisms)
+3. [Image Processing](https://github.com/jmc359/youbot#image-processing)
+   - [Color Processing](https://github.com/jmc359/youbot#color-processing)
+   - [Whole-Image Processing](https://github.com/jmc359/youbot#whole-image-processing)
+4. [Evaluating Safety](https://github.com/jmc359/youbot#evaluating-safety)
+5. [Helper Functions](https://github.com/jmc359/youbot#helper-functions)
+6. [Further Steps](https://github.com/jmc359/youbot#further-steps)
+7. [Team Members & Details](https://github.com/jmc359/youbot#lambda-5-team)
 
 ## Moving Mechanisms
 Functions and definitions for moving the robot base
 - `translate()` - Joe?
-- `main()` &larr; `robot_control()`, parameters
+- `main()` &rarr; `robot_control()`, parameters
     - `timer`, a variable local to `main()` that is defined outside of `robot_control` so that it does not reset every time step
     - `turning` - Joe?
     - `timesteps` - Joe?
-    - `threshold`, a safety threshold for initiating turn; because turning is time consuming, it should be used sparsely and decivisely
+    - `threshold`, a safety threshold for initiating turn; because turning is time-consuming, it should be used sparsely and decivisely
     - `last_info` - Joe?
     - `robot_info` - Joe?
-- `robot_control()` &larr; `if(timer % 16 == 0)`, initiates camera captures and processing every other time step.
+- `robot_control()` &rarr; `if(timer % 16 == 0)`, initiates camera captures and processing every other time step.
 
 ## Turning Mechanisms
 Functions and definitions for turning the robot base
 - `rotate()` - Joe?
 - `rotate_update()` - Joe?
-- `robot_control()` &larr; performing turn
+- `robot_control()` &rarr; performing turn
 ```c
 // ... 
     if (zombieness > threshold) { // does calculated safety level warrant a turn?
@@ -65,7 +64,7 @@ Functions and definitions for interpreting raw images taken of the local environ
     - currently implemented to split the image into vertical panes and evaluate safety per pane
     - improvements include: (i) calculating an incentive score, which considers berries according the robot's current `last.health` or `last.energy`, (ii) assessing horizontal panes for tree trunk/stump and berry detection, (iii) optimizing color classification methods such as using grayscaling or other color spaces
 
-## Determining Safety
+## Evaluating Safety
 Functions and definitions for evaluating the safety of the local environment
 - `calcZombiness()`
    - returns a calculation of how much 'zombieness' based on given frame's green and blue values
@@ -75,7 +74,7 @@ Functions and definitions for evaluating the safety of the local environment
 - `isStuck()`
    - returns a `bool` of whether the robot is approaching a potential 'stuck' situation (i.e., wall, tree, world edge)
    - can be a factor for safety evaluation of current frame that can be prioritized alongside zombie detection
-- `robot_control()` &larr; computing safest route
+- `robot_control()` &rarr; computing safest route
 ```c
 // split view into vertical panes and evaluate safety for each pane
 float *views_vertical = get_views_vertical(image,viewpanes_vertical,viewpanes_horizontal,image_width,image_height);
@@ -111,6 +110,19 @@ Helper methods for tests and aforementioned processes
     - however, currently implemented as a test for the compass sensor because of world 3 revised turning specification, see `get_bearing_in_degrees()`
  
 ## Further Steps
+1. **improving default zombie avoidance behavior**
+    - adjusting safety threshold to 'learn' from environment
+    - separating zombie avoidance from general safety evaluations
+    - creating a priority list for handling zombie avoidance situations, such as choosing between purple versus aqua zombie, staying close to wall or berry location according to the circumstance
+2. **optimizing current image processing**
+    - Sydney?
+3. **improving wall detection and avoidance**
+4. **optimizing berry detection and collection**
+    - creating a global berry map that allows the robot to 'remember' general location of berries
+    - implement a 'berry necessity' function that evaluates when to ignore a found berry or initiate a berry search
+    - implement 'learning' for berry effects; for example, avoid yellow berries if they often decrease energy
+5. **avoiding zombies based on color**
+6. **using the gripper**, exploring the use of the gripper for getting berries on top tree stumps
 
 ## Lambda (5) Team
 - Rebecca Ramnauth, [rebecca.ramnauth@yale.edu](mailto:rebecca.ramnauth@yale.edu)
