@@ -103,18 +103,18 @@ void turn_right()
 typedef struct turn{
   int direction, steps;
   struct turn *next;
-};
+} Turn;
 
 // Queue data structure
 typedef struct queue{
-  turn* head;
-  turn* tail;
+  struct turn* head;
+  struct turn* tail;
   int n;
-};
+} Queue;
 
 // construct queue
-queue *queue_constuct(void){
-    queue *q;
+Queue *queue_constuct(void){
+    Queue *q;
     q = malloc(sizeof(Queue));
     q->head = 0;
     q->tail = 0;
@@ -123,13 +123,13 @@ queue *queue_constuct(void){
 }
 
 // return queue length
-int queue_length(queue *q){
+int queue_length(Queue *q){
   return q->n;
 }
 
 // enqueue struct turn to q
-void enqueue(queue *q, int direction, int steps){
-  turn *t = malloc(sizeof(turn));
+void enqueue(Queue *q, int direction, int steps){
+  Turn *t = malloc(sizeof(Turn));
   t->next = 0;
   t->direction = direction;
   t->steps = steps;
@@ -145,17 +145,17 @@ void enqueue(queue *q, int direction, int steps){
 }
 
 // dequeue element from q
-turn *dequeue(queue *q){
-  turn *t = q->head;
+Turn *dequeue(Queue *q){
+  Turn *t = q->head;
   q->head = t->next;
   q->n--;
   return t;
 }
 
 // destroy queue
-void queue_destroy(queue *q){
+void queue_destroy(Queue *q){
   while (queue_length(q) > 0){
-    turn *tmp = dequeue(q);
+    Turn *tmp = dequeue(q);
     free(tmp);
   }
 }
