@@ -95,6 +95,71 @@ void turn_right()
 ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/* 
+ * Queue functions
+ */
+
+// Link in queue
+typedef struct turn{
+  int direction, steps;
+  struct turn *next;
+};
+
+// Queue data structure
+typedef struct queue{
+  turn* head;
+  turn* tail;
+  int n;
+};
+
+// construct queue
+queue *queue_constuct(void){
+    queue *q;
+    q = malloc(sizeof(Queue));
+    q->head = 0;
+    q->tail = 0;
+    q->n = 0;
+    return q;
+}
+
+// return queue length
+int queue_length(queue *q){
+  return q->n;
+}
+
+// enqueue struct turn to q
+void enqueue(queue *q, int direction, int steps){
+  turn *t = malloc(sizeof(turn));
+  t->next = 0;
+  t->direction = direction;
+  t->steps = steps;
+
+  if (q->n == 0){
+    q->head = q->tail = t;
+  } 
+  else {
+    q->tail->next = t;
+    q->tail = t;
+  }
+  q->n++;
+}
+
+// dequeue element from q
+turn *dequeue(queue *q){
+  turn *t = q->head;
+  q->head = t->next;
+  q->n--;
+  return t;
+}
+
+// destroy queue
+void queue_destroy(queue *q){
+  while (queue_length(q) > 0){
+    turn *tmp = dequeue(q);
+    free(tmp);
+  }
+}
+
 /*
  * Helper functions for printing/creating/returning min of arrays
  */
@@ -174,6 +239,7 @@ double get_bearing_in_radians() {
 #define RIGHT (1)
 #define FORWARD (2)
 #define BACKWARD (3)
+
 
 // Initiates turning the robot
 // rotate_update() waits the proper amount of time
