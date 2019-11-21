@@ -460,24 +460,24 @@ int in_range(double *hsv, double *hsv_compare, double epsilon)
 
 // create image masked on input color
 void color_mask_image(const unsigned char *image, int color, int image_width, int image_height, int mask_image[image_width][image_height]) {
-    double epsilon = 8.0;
+    double epsilon = 5.0;
 
     double hsv_min[3];
     rgb_to_hsv(min_colors[color], hsv_min);
     double hsv_max[3];
     rgb_to_hsv(max_colors[color], hsv_max);
 
-   // FILE *file_pointer = NULL;
-   // file_pointer = fopen("image_mask.txt", "w");
-
-   // FILE *im_fptr_r = NULL;
-   // im_fptr_r = fopen("image_r.txt", "w");
-
-   // FILE *im_fptr_g = NULL;
-   // im_fptr_g = fopen("image_g.txt", "w");
-
-   // FILE *im_fptr_b = NULL;
-   // im_fptr_b = fopen("image_b.txt", "w");
+//   FILE *file_pointer = NULL;
+//   file_pointer = fopen("image_mask.txt", "w");
+//
+//   FILE *im_fptr_r = NULL;
+//   im_fptr_r = fopen("image_r.txt", "w");
+//
+//   FILE *im_fptr_g = NULL;
+//   im_fptr_g = fopen("image_g.txt", "w");
+//
+//   FILE *im_fptr_b = NULL;
+//   im_fptr_b = fopen("image_b.txt", "w");
 
     // int color_count = 0;
     for (int x = 0; x < image_width; x++) {
@@ -503,27 +503,27 @@ void color_mask_image(const unsigned char *image, int color, int image_width, in
                 // printf("hsv max: {%f, %f, %f}\n", hsv_max[0], hsv_max[1], hsv_max[2]);
             // }
 
-            // if (y == 0) {
-                    // fprintf(file_pointer, "%d", found_color);
-                    // fprintf(im_fptr_r, "%d", r);
-                    // fprintf(im_fptr_g, "%d", g);
-                    // fprintf(im_fptr_b, "%d", b);
-                // } else {
-                    // fprintf(file_pointer, ",%d", found_color);
-                    // fprintf(im_fptr_r, ",%d", r);
-                    // fprintf(im_fptr_g, ",%d", g);
-                    // fprintf(im_fptr_b, ",%d", b);
-            // }
+//            if (y == 0) {
+//                    fprintf(file_pointer, "%d", found_color);
+//                    fprintf(im_fptr_r, "%d", r);
+//                    fprintf(im_fptr_g, "%d", g);
+//                    fprintf(im_fptr_b, "%d", b);
+//                } else {
+//                    fprintf(file_pointer, ",%d", found_color);
+//                    fprintf(im_fptr_r, ",%d", r);
+//                    fprintf(im_fptr_g, ",%d", g);
+//                    fprintf(im_fptr_b, ",%d", b);
+//            }
         }
-       // fprintf(file_pointer, "\n");
-       // fprintf(im_fptr_r, "\n");
-       // fprintf(im_fptr_g, "\n");
-       // fprintf(im_fptr_b, "\n");
+//       fprintf(file_pointer, "\n");
+//       fprintf(im_fptr_r, "\n");
+//       fprintf(im_fptr_g, "\n");
+//       fprintf(im_fptr_b, "\n");
     }
-   // fclose(file_pointer);
-   // fclose(im_fptr_r);
-   // fclose(im_fptr_g);
-   // fclose(im_fptr_b);
+//   fclose(file_pointer);
+//   fclose(im_fptr_r);
+//   fclose(im_fptr_g);
+//   fclose(im_fptr_b);
    // printf("Color count: %d\n", color_count);
 }
 
@@ -711,19 +711,29 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
 
     // determine direction from camera inputs
     int direction = FORWARD;
-    float epsilon = 0.5;
 
     // check for immediate berries
+    float front_danger_sum = 0;
+    float right_danger_sum = 0;
+    float left_danger_sum = 0;
     float front_berry_sum = 0;
     float left_berry_sum = 0;
     float right_berry_sum = 0;
     float front_obstacle_sum = 0;
     float right_obstacle_sum = 0;
     float left_obstacle_sum = 0;
+    
     for (int i = 0; i < viewpanes_vertical; i++) {
+        if (i > 0 && i < viewpanes_vertical-1) {
+          front_danger_sum += front_total_danger[i];
+          right_danger_sum += right_total_danger[i];
+          left_danger_sum += left_total_danger[i];  
+        }      
+        
         front_berry_sum += front_total_berries[i];
         right_berry_sum += right_total_berries[i];
         left_berry_sum += left_total_berries[i];
+        
         front_obstacle_sum += front_total_obstacles[i];
         right_obstacle_sum += right_total_obstacles[i];
         left_obstacle_sum += left_total_obstacles[i];
@@ -733,44 +743,44 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
     // bool right_berries_on_boxes = fabs(right_total_obstacles[2] - right_total_berries[2]) > epsilon;
     // bool left_berries_on_boxes = fabs(left_total_obstacles[2] - left_total_berries[2]) > epsilon;
     
-    bool right_berries_on_boxes = right_obstacle_sum > 2*right_berry_sum;
-    bool left_berries_on_boxes = right_obstacle_sum > 2*left_berry_sum;
+    bool right_berries_on_boxes = right_obstacle_sum > 1.5*right_berry_sum;
+    bool left_berries_on_boxes = left_obstacle_sum > 1.5*left_berry_sum;
     
     printf("right berries: %d\n", right_berries_on_boxes);
     printf("left berries: %d\n", left_berries_on_boxes);
     printf("front obstacles: %f\n", front_obstacle_sum);
     
-    if (front_berry_sum > params->berry_threshold || 4*front_total_berries[1] > params->berry_threshold) {
+    if (front_berry_sum > params->berry_threshold || 5*front_total_berries[1] > params->berry_threshold) {
         printf("FORWARD\n");
         direction = FORWARD;
-    } else if (right_total_berries[2] > params->berry_threshold) { //&& !right_berries_on_boxes) {
+    } else if (right_total_berries[2] > params->berry_threshold) { // && !right_berries_on_boxes) {
         printf("RIGHT\n");
         direction = RIGHT;
-    } else if (left_total_berries[2] > params->berry_threshold) { //&& !left_berries_on_boxes) {
+    } else if (left_total_berries[2] > params->berry_threshold) { // && !left_berries_on_boxes) {
         printf("LEFT\n");
         direction = LEFT;
     }
 
     // zombie avoidance
-    if (front_total_danger[0] > params->zombie_threshold) {
+    if (front_danger_sum > params->zombie_threshold) {
         printf("FORWARD DANGEROUS\n");
-        if (left_total_danger[0] < right_total_danger[0] && left_total_danger[0] < front_total_danger[0]) {
+        if (left_danger_sum < right_danger_sum && left_danger_sum < front_danger_sum) {
             direction = LEFT;
-        } else if (right_total_danger[0] > left_total_danger[0] && right_total_danger[0] < front_total_danger[0]) {
+        } else if (right_danger_sum < left_danger_sum && right_danger_sum < front_danger_sum) {
             direction = RIGHT;
         } else {
             direction = FORWARD;
         }
     }
 
-    if (front_obstacle_sum > params->obstacle_threshold) {
-        printf("OBSTACLE DETECTED\n");
-        if (left_total_berries > right_total_berries) {
-            direction = LEFT;
-        } else {
-            direction = RIGHT;
-        }
-    }
+    // if (front_obstacle_sum > params->obstacle_threshold) {
+        // printf("OBSTACLE DETECTED\n");
+        // if (left_total_berries > right_total_berries) {
+            // direction = LEFT;
+        // } else {
+            // direction = RIGHT;
+        // }
+    // }
 
     return direction;
 }
@@ -791,7 +801,7 @@ void robot_control(int timer, Control *params)
     int left_image_height = wb_camera_get_height(10); // height of camera 10, $200
 
     const double *gps = wb_gps_get_values(2); // get gps coordinates, $300
-    if (timer % 16 == 0) { // n % 16 (different camera parameters now)
+    if (timer % 8 == 0) { // n % 16 (different camera parameters now)
         // print sensor values
         printf("\n");
         printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", gps[0], gps[1], gps[2]);
