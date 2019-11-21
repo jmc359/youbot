@@ -839,24 +839,24 @@ void robot_control(int timer, Control *params)
         direction = analyze_cameras(params, viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height,
                                     right_image_width, right_image_height, left_image_width, left_image_height);
 
-        // if losing health from zombie, run forward
-        if (params->last_info.health - params->current_info.health == 8) {
-            printf("OVERRIDING TO RUN\n");
-            direction = FORWARD;
-        }
         // override if turning in cycles
         int override_direction = override(params->q);
+        // Turn if stuck 
         if (override_direction >= 0){
           printf("OVERRIDING BAD BEHAVIOR\n");
           direction = override_direction;
         }
-
+        // if losing health from zombie, run forward
+        else if (params->last_info.health - params->current_info.health == 8) {
+            printf("OVERRIDING TO RUN\n");
+            direction = FORWARD;
+        }
         // Get unstuck from walls/trees/edges/etc.
-        if (is_stuck(params->last_gps, gps, &(params->stuck_steps), &(params->turning), &(params->timesteps))){
+        else if (is_stuck(params->last_gps, gps, &(params->stuck_steps), &(params->turning), &(params->timesteps))){
           printf("GETTING UNSTUCK\n");
           direction = LEFT;
         }
-
+        
         // make_turn
         if (direction == RIGHT || direction == LEFT) {
             rotate(direction, &(params->turning), &(params->timesteps), params->q, params->time);
@@ -976,11 +976,17 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     // control function called every time step
-    parameters->current_info.health = robot_info.health;
-    parameters->current_info.energy = robot_info.energy;
+    if (timer % 16 == 0)
+    {
+      parameters->current_info.health = robot_info.health;
+      parameters->current_info.energy = robot_info.energy;
+    }
     robot_control(timer, parameters);
-    parameters->last_info.health = robot_info.health;
-    parameters->last_info.energy = robot_info.energy;
+    if (timer % 16 == 0)
+    {
+      parameters->last_info.health = robot_info.health;
+      parameters->last_info.energy = robot_info.energy;
+    }
     (parameters->time)++;
 
     if (parameters->time > 100000000000){
