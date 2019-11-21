@@ -717,7 +717,7 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
     color_mask_image(left_image, PINK, front_image_width, front_image_height, mask_image);
 
     // determine direction from camera inputs
-    int direction = FORWARD;
+    int direction = FORWARD; // move forward by default
 
     // check for immediate danger
     float front_danger_sum = 0;
@@ -734,38 +734,25 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
 
     // check for immediate berries
     float front_berry_sum = sumOfArray(front_total_berries, viewpanes_vertical);
-    float right_berry_sum = sumOfArray(right_total_berries, viewpanes_vertical);
-    float left_berry_sum = sumOfArray(left_total_berries, viewpanes_vertical);
+    // float right_berry_sum = sumOfArray(right_total_berries, viewpanes_vertical);
+    // float left_berry_sum = sumOfArray(left_total_berries, viewpanes_vertical);
 
     // check for immediate obstacles
     float front_obstacle_sum = sumOfArray(front_total_obstacles, viewpanes_vertical);
     float right_obstacle_sum = sumOfArray(right_total_obstacles, viewpanes_vertical);
     float left_obstacle_sum = sumOfArray(left_total_obstacles, viewpanes_vertical);
+    
+    // calculate the number of berries on peripheral boxes
+    // bool right_berries_on_boxes = right_obstacle_sum > 1.5*right_berry_sum;
+    // bool left_berries_on_boxes = left_obstacle_sum > 1.5*left_berry_sum;
 
-    bool right_berries_on_boxes = right_obstacle_sum > 1.5*right_berry_sum;
-    bool left_berries_on_boxes = left_obstacle_sum > 1.5*left_berry_sum;
-
-    printf("right berries on boxes: %d\n", right_berries_on_boxes);
-    printf("left berries on boxes: %d\n", left_berries_on_boxes);
-    printf("front obstacles: %f\n", front_obstacle_sum);
+    // printf("right berries on boxes: %d\n", right_berries_on_boxes);
+    // printf("left berries on boxes: %d\n", left_berries_on_boxes);
 
     int center_frame = viewpanes_vertical / 2;
+    
+    // initialize direction incentive
     float front_incentive = 0, left_incentive = 0, right_incentive = 0;
-    
-    //if (front_berry_sum > params->berry_threshold || 5*front_total_berries[center_frame] > params->berry_threshold) {
-        // printf("FORWARD\n");
-        // direction = FORWARD;
-        // front_incentive += 1;
-    // } else if (right_total_berries[center_frame] > params->berry_threshold) { // only turn if aligned with berry
-        // printf("RIGHT\n");
-        // direction = RIGHT;
-        // right_incentive += 1;
-    //} else if (left_total_berries[center_frame] > params->berry_threshold) { // only turn if aligned with berry
-        // printf("LEFT\n");
-        // direction = LEFT;
-        //left_incentive += 1;
-    //}
-    
     
     // adjust sensitivity to berries according to current health
     float remaining_energy = (100-params->current_info.energy)/100.0;
@@ -782,33 +769,24 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
     }
 
     // determine zombie avoidance incentive
-    //if (front_danger_sum > params->zombie_threshold) {
-        //printf("FORWARD DANGEROUS\n");
-        if (left_danger_sum < right_danger_sum && left_danger_sum < front_danger_sum) {
-            left_incentive += params->zombie_sensitivity;
-            // direction = LEFT;
-        } else if (right_danger_sum < left_danger_sum && right_danger_sum < front_danger_sum) {
-            right_incentive += params->zombie_sensitivity;
-            // direction = RIGHT;
-        } else {
-            front_incentive += params->zombie_sensitivity;
-            // direction = FORWARD;
-        }
-    //}
+    if (left_danger_sum < right_danger_sum && left_danger_sum < front_danger_sum) {
+        left_incentive += params->zombie_sensitivity;
+    } else if (right_danger_sum < left_danger_sum && right_danger_sum < front_danger_sum) {
+        right_incentive += params->zombie_sensitivity;
+    } else {
+        front_incentive += params->zombie_sensitivity;
+    }
 
-     //if (front_obstacle_sum > params->obstacle_threshold) {
-         //printf("OBSTACLE DETECTED\n");
-         if (left_obstacle_sum > right_obstacle_sum) {
-             right_incentive += params->obstacle_sensitivity;
-             // direction = LEFT;
-         } else if (right_obstacle_sum > left_obstacle_sum){
-             left_incentive += params->obstacle_sensitivity;
-             // direction = RIGHT;
-         } else {
-             front_incentive += params->obstacle_sensitivity;
-         }
-     //}
+    // determine obstacle avoidance incentive
+    if (left_obstacle_sum > right_obstacle_sum) {
+        right_incentive += params->obstacle_sensitivity;
+    } else if (right_obstacle_sum > left_obstacle_sum){
+        left_incentive += params->obstacle_sensitivity;
+    } else {
+        front_incentive += params->obstacle_sensitivity;
+    }
      
+     // choose a direction according to incentive consensus
      printf("incentives [left, front, right] = [%.2f, %.2f, %.2f]\n", left_incentive, front_incentive, right_incentive);
      if (front_incentive > left_incentive && front_incentive > right_incentive) direction = FORWARD;
      else if (left_incentive > right_incentive && left_incentive > front_incentive) direction = LEFT;
