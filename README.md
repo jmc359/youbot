@@ -94,22 +94,31 @@ Functions and definitions for evaluating the safety of the local environment
       - in safe situations (no impending collision or zombies) move towards visible berries
       - if no berries visible, drive forward
    - the activation of each behavior is thresholded by hyperparameters of the system
-- `robot_control()` &rarr; computing safest route
+- `robot_control()` &rarr; controls distribution of direction controls to robot
+   - given a control from `analyze_cameras(...)`, computes whether to send controls as prescribed or override behavior with more urgent controls
+   - overrides direction from `analyze_cameras()` if the robot is stuck in a loop or an edge/corner
 ```c
-// split view into vertical panes and evaluate safety for each pane
-float *views_vertical = get_views_vertical(image,viewpanes_vertical,viewpanes_horizontal,image_width,image_height);
+int camera_direction = FORWARD;
+camera_direction = analyze_cameras(...);
 
-// determine safest pane
-int safest_pane = getIndexOfMin(views_vertical, (sizeof(views_vertical)/sizeof(views_vertical[0])));
+// make turn
+if (camera_direction == RIGHT || camera_direction == LEFT) {
+   printf("ROTATING FROM CAMERA\n");
+   rotate(camera_direction, &(params->turning), &(params->timesteps), params->q, params->time);
+}
 
-// convert safest pane result to direction instruction (0 = 'left', 1 = 'right', 0.5 = 'straight')
-double safest_direction = round(((float)safest_pane/(viewpanes_vertical - 1)) * 2)/2;
+// override if turning in cycles
+int direction = override(params->q);
+if (direction >= 0){
+ printf("OVERRIDING BAD BEHAVIOR\n");
+ rotate(direction, &(params->turning), &(params->timesteps), params->q, params->time);
+}
 
-// determine total zombieness of safest pane
-// compare to a threshold to determine if a turn is warranted
-float zombieness = sumOfArray(&views_vertical[safest_pane], (sizeof(views_vertical)/sizeof(views_vertical[0])));
-
-printf("safest pane = %d, safest direction = %.1f, zombieness = %.4f\n", safest_pane, safest_direction, zombieness);
+// Get unstuck from walls/trees/edges/etc.
+if (is_stuck(params->last_gps, gps, &(params->stuck_steps), &(params->turning), &(params->timesteps))){
+ printf("GETTING UNSTUCK\n");
+ rotate(LEFT, &(params->turning), &(params->timesteps), params->q, params->time);
+}
 ```
 
 ## Helper Functions
