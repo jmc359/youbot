@@ -657,6 +657,7 @@ typedef struct control{
   double *last_gps;
   int turning, timesteps, stuck_steps;
   float zombie_threshold, berry_threshold, obstacle_threshold;
+  float zombie_sensitivity, berry_sensitivity, obstacle_sensitivity;
   Queue *q;
   struct Robot current_info, last_info;
   long long time;
@@ -693,13 +694,6 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
     const unsigned char *right_image = wb_camera_get_image(9);
     const unsigned char *left_image = wb_camera_get_image(10);
 
-    // printf("Front camera:\n");
-    // float front_total_danger[viewpanes_vertical];
-    // float front_total_berries[viewpanes_vertical];
-    // float front_total_obstacles[viewpanes_vertical];
-    // analyze_camera_view(viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height, front_image,
-                        // front_total_danger, front_total_berries, front_total_obstacles);
-
     printf("Right camera:\n");
     float right_total_danger[viewpanes_vertical];
     float right_total_berries[viewpanes_vertical];
@@ -727,7 +721,7 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
     // determine direction from camera inputs
     int direction = FORWARD;
 
-    // check for immediate berries
+    // check for immediate danger
     float front_danger_sum = 0;
     float right_danger_sum = 0;
     float left_danger_sum = 0;
@@ -740,18 +734,15 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
         }
     }
 
+    // check for immediate berries
     float front_berry_sum = sumOfArray(front_total_berries, viewpanes_vertical);
     float right_berry_sum = sumOfArray(right_total_berries, viewpanes_vertical);
     float left_berry_sum = sumOfArray(left_total_berries, viewpanes_vertical);
 
+    // check for immediate obstacles
     float front_obstacle_sum = sumOfArray(front_total_obstacles, viewpanes_vertical);
     float right_obstacle_sum = sumOfArray(right_total_obstacles, viewpanes_vertical);
     float left_obstacle_sum = sumOfArray(left_total_obstacles, viewpanes_vertical);
-
-    printf("Front berry sum: %f\n", front_berry_sum);
-
-    // bool right_berries_on_boxes = fabs(right_total_obstacles[2] - right_total_berries[2]) > epsilon;
-    // bool left_berries_on_boxes = fabs(left_total_obstacles[2] - left_total_berries[2]) > epsilon;
 
     bool right_berries_on_boxes = right_obstacle_sum > 1.5*right_berry_sum;
     bool left_berries_on_boxes = left_obstacle_sum > 1.5*left_berry_sum;
@@ -761,38 +752,64 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
     printf("front obstacles: %f\n", front_obstacle_sum);
 
     int center_frame = viewpanes_vertical / 2;
-    if (front_berry_sum > params->berry_threshold || 5*front_total_berries[center_frame] > params->berry_threshold) {
-        printf("FORWARD\n");
-        direction = FORWARD;
-    } else if (right_total_berries[center_frame] > params->berry_threshold) { // only turn if aligned with berry
-        printf("RIGHT\n");
-        direction = RIGHT;
-    } else if (left_total_berries[center_frame] > params->berry_threshold) { // only turn if aligned with berry
-        printf("LEFT\n");
-        direction = LEFT;
+    float front_incentive = 0, left_incentive = 0, right_incentive = 0;
+    
+    //if (front_berry_sum > params->berry_threshold || 5*front_total_berries[center_frame] > params->berry_threshold) {
+        // printf("FORWARD\n");
+        // direction = FORWARD;
+        // front_incentive += 1;
+    // } else if (right_total_berries[center_frame] > params->berry_threshold) { // only turn if aligned with berry
+        // printf("RIGHT\n");
+        // direction = RIGHT;
+        // right_incentive += 1;
+    //} else if (left_total_berries[center_frame] > params->berry_threshold) { // only turn if aligned with berry
+        // printf("LEFT\n");
+        // direction = LEFT;
+        //left_incentive += 1;
+    //}
+    
+    // determine berry incentive 
+    if (left_total_berries[center_frame] > right_total_berries[center_frame] && left_total_berries[center_frame] > front_berry_sum) {
+        left_incentive += params->berry_sensitivity;
+    } else if (right_total_berries[center_frame] > left_total_berries[center_frame] && right_total_berries[center_frame] > front_berry_sum) {
+        right_incentive += params->berry_sensitivity;
+    } else {
+        front_incentive += params->berry_sensitivity;
     }
 
-    // zombie avoidance
-    if (front_danger_sum > params->zombie_threshold) {
-        printf("FORWARD DANGEROUS\n");
+    // determine zombie avoidance incentive
+    //if (front_danger_sum > params->zombie_threshold) {
+        //printf("FORWARD DANGEROUS\n");
         if (left_danger_sum < right_danger_sum && left_danger_sum < front_danger_sum) {
-            direction = LEFT;
+            left_incentive += params->zombie_sensitivity;
+            // direction = LEFT;
         } else if (right_danger_sum < left_danger_sum && right_danger_sum < front_danger_sum) {
-            direction = RIGHT;
+            right_incentive += params->zombie_sensitivity;
+            // direction = RIGHT;
         } else {
-            direction = FORWARD;
+            front_incentive += params->zombie_sensitivity;
+            // direction = FORWARD;
         }
-    }
+    //}
 
-     if (front_obstacle_sum > params->obstacle_threshold) {
-         printf("OBSTACLE DETECTED\n");
-         if (left_total_berries > right_total_berries) {
-             direction = LEFT;
+     //if (front_obstacle_sum > params->obstacle_threshold) {
+         //printf("OBSTACLE DETECTED\n");
+         if (left_obstacle_sum > right_obstacle_sum) {
+             right_incentive += params->obstacle_sensitivity;
+             // direction = LEFT;
+         } else if (right_obstacle_sum > left_obstacle_sum){
+             left_incentive += params->obstacle_sensitivity;
+             // direction = RIGHT;
          } else {
-             direction = RIGHT;
+             front_incentive += params->obstacle_sensitivity;
          }
-     }
-
+     //}
+     
+     printf("incentives [left, front, right] = [%.2f, %.2f, %.2f]\n", left_incentive, front_incentive, right_incentive);
+     if (front_incentive > left_incentive && front_incentive > right_incentive) direction = FORWARD;
+     else if (left_incentive > right_incentive && left_incentive > front_incentive) direction = LEFT;
+     else direction = RIGHT;
+     
      // correct for bad planned turns
      int front_dangerous = front_danger_sum > params->zombie_threshold || front_obstacle_sum > params->obstacle_threshold;
      int right_dangerous = right_danger_sum > params->zombie_threshold || right_obstacle_sum > params->obstacle_threshold;
@@ -823,7 +840,7 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
 void robot_control(int timer, Control *params)
 {
     // Variables dictating image processing
-    int viewpanes_vertical = 7; // no. of vertical panes to split view
+    int viewpanes_vertical = 3; // no. of vertical panes to split view
     int viewpanes_horizontal = 2; // no. of horizontal panes to split view
 
     int front_image_width = wb_camera_get_width(4); // width of camera 4, $300
@@ -836,13 +853,12 @@ void robot_control(int timer, Control *params)
     int left_image_height = wb_camera_get_height(10); // height of camera 10, $200
 
     const double *gps = wb_gps_get_values(2); // get gps coordinates, $300
-    if (timer % 8 == 0) { // n % 16 (different camera parameters now)
+    if (timer % 16 == 0) {
         // print sensor values
         printf("\n");
         printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", gps[0], gps[1], gps[2]);
 
-        int direction = FORWARD;
-        direction = analyze_cameras(params, viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height,
+        int direction = analyze_cameras(params, viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height,
                                     right_image_width, right_image_height, left_image_width, left_image_height);
 
         // override if turning in cycles
@@ -870,6 +886,8 @@ void robot_control(int timer, Control *params)
     }
     translate(FORWARD, &(params->turning));
     rotate_update(&(params->turning), &(params->timesteps));
+    
+    // update gps history
     params->last_gps[0] = (double)gps[0];
     params->last_gps[1] = (double)gps[1];
     params->last_gps[2] = (double)gps[2];
@@ -910,10 +928,11 @@ int main(int argc, char **argv)
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // sensor choices
-//  wb_accelerometer_enable(1,1);         // test in robot_control
-  wb_gps_enable(2,TIME_STEP);           // test in robot_control
-//  wb_compass_enable(3,TIME_STEP);       // test in robot_control
-  wb_camera_enable(4,TIME_STEP);        // test in robot_control
+  
+//  wb_accelerometer_enable(1,1);     
+  wb_gps_enable(2,TIME_STEP);          
+//  wb_compass_enable(3,TIME_STEP);      
+  wb_camera_enable(4,TIME_STEP);      
 //  wb_camera_enable(5,TIME_STEP);
 //  wb_camera_enable(6,TIME_STEP);
 //  wb_camera_enable(7,TIME_STEP);
@@ -921,11 +940,11 @@ int main(int argc, char **argv)
   wb_camera_enable(9,TIME_STEP);
   wb_camera_enable(10,TIME_STEP);
 //  wb_camera_enable(11,TIME_STEP);
-//  wb_gyro_enable(12,TIME_STEP);         // test in robot_control
-//  wb_light_sensor_enable(13,TIME_STEP); // test in robot control
-//  wb_receiver_enable(14,TIME_STEP);     // test in main
+//  wb_gyro_enable(12,TIME_STEP);         
+//  wb_light_sensor_enable(13,TIME_STEP);
+//  wb_receiver_enable(14,TIME_STEP);
 //  wb_range_finder_enable(15,TIME_STEP);
-//  wb_lidar_enable(16,1);                // RR ?? not fully tested - see main
+//  wb_lidar_enable(16,1);                
 
   // Robot info structs
   struct Robot last_info = {100,100};
@@ -934,16 +953,24 @@ int main(int argc, char **argv)
   // Parameters fed to control function
   Control* parameters = malloc(sizeof(Control));
   parameters->last_gps = malloc(sizeof(double) * 3);
+  
   parameters->last_gps[0] = 0;
   parameters->last_gps[1] = 0;
   parameters->last_gps[2] = 0;
+  
   parameters->turning = 0;
   parameters->timesteps = 0;
   parameters->stuck_steps = 0;
   parameters->time = 0;
+  
   parameters->zombie_threshold = 20.0;
   parameters->berry_threshold = 0.5;
   parameters->obstacle_threshold = 15.0;
+  
+  parameters->zombie_sensitivity= 0.75;
+  parameters->berry_sensitivity = 0.15;
+  parameters->obstacle_sensitivity = 0.10;
+  
   parameters->last_info = last_info;
   parameters->current_info = current_info;
   parameters->q = queue_constuct();
