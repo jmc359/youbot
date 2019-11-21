@@ -384,12 +384,12 @@ static int berry_colors[4] = {RED, PINK, ORANGE, YELLOW};
 static int wall_colors[1] = {WHITE};
 static int obstacle_colors[1] = {BLACK};
 
-static int min_colors[10][3] = {{10, 39, 97}, {11, 67, 68}, {10, 52, 16}, {45, 18, 92},
-                               {76, 18, 31}, {62, 38, 67}, {62, 38, 32}, {69, 67, 13},
-                               {69, 74, 94}, {10, 10, 14}};
-static int max_colors[10][3] = {{28, 111, 198}, {76, 192, 175}, {64, 158, 68}, {115, 49, 185},
+static int min_colors[10][3] = {{10, 39, 97}, {11, 67, 68}, {11, 51, 16}, {45, 18, 92},
+                               {69, 18, 17}, {62, 38, 67}, {29, 175, 31}, {69, 67, 13},
+                               {69, 74, 94}, {10, 10, 13}};
+static int max_colors[10][3] = {{26, 96, 180}, {21, 152, 129}, {37, 192, 41}, {115, 49, 185},
                                {209, 62, 44}, {193, 124, 167}, {194, 124, 85}, {207, 195, 37},
-                               {222, 223, 239}, {35, 35, 37}};
+                               {222, 223, 239}, {35, 36, 38}};
 
 void rgb_to_hsv(int rgb[], double *hsv) {
     double red = rgb[0]/255.0;
@@ -708,6 +708,9 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
     float front_total_obstacles[viewpanes_vertical];
     analyze_camera_view(viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height, front_image,
                         front_total_danger, front_total_berries, front_total_obstacles);
+
+//    int mask_image[front_image_width][front_image_height];
+//    color_mask_image(front_image, BLACK, front_image_width, front_image_height, mask_image);
 
     // determine direction from camera inputs
     int direction = FORWARD;
