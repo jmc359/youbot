@@ -468,17 +468,17 @@ void color_mask_image(const unsigned char *image, int color, int image_width, in
     double hsv_max[3];
     rgb_to_hsv(max_colors[color], hsv_max);
 
-   FILE *file_pointer = NULL;
-   file_pointer = fopen("image_mask.txt", "w");
-
-   FILE *im_fptr_r = NULL;
-   im_fptr_r = fopen("image_r.txt", "w");
-
-   FILE *im_fptr_g = NULL;
-   im_fptr_g = fopen("image_g.txt", "w");
-
-   FILE *im_fptr_b = NULL;
-   im_fptr_b = fopen("image_b.txt", "w");
+//   FILE *file_pointer = NULL;
+//   file_pointer = fopen("image_mask.txt", "w");
+//
+//   FILE *im_fptr_r = NULL;
+//   im_fptr_r = fopen("image_r.txt", "w");
+//
+//   FILE *im_fptr_g = NULL;
+//   im_fptr_g = fopen("image_g.txt", "w");
+//
+//   FILE *im_fptr_b = NULL;
+//   im_fptr_b = fopen("image_b.txt", "w");
 
     // int color_count = 0;
     for (int x = 0; x < image_width; x++) {
@@ -495,7 +495,7 @@ void color_mask_image(const unsigned char *image, int color, int image_width, in
             int in_range_max = in_range(hsv, hsv_max, hue_epsilon, epsilon);
             int found_color = in_range_min || in_range_max;
             mask_image[x][y] = found_color;
-            
+
             // color_count += found_color;
 
             // if (x == 65 && y == 30) {
@@ -504,27 +504,27 @@ void color_mask_image(const unsigned char *image, int color, int image_width, in
                 // printf("hsv max: {%f, %f, %f}\n", hsv_max[0], hsv_max[1], hsv_max[2]);
             // }
 
-            if (y == 0) {
-                    fprintf(file_pointer, "%d", found_color);
-                    fprintf(im_fptr_r, "%d", r);
-                    fprintf(im_fptr_g, "%d", g);
-                    fprintf(im_fptr_b, "%d", b);
-                } else {
-                    fprintf(file_pointer, ",%d", found_color);
-                    fprintf(im_fptr_r, ",%d", r);
-                    fprintf(im_fptr_g, ",%d", g);
-                    fprintf(im_fptr_b, ",%d", b);
-            }
+//            if (y == 0) {
+//                    fprintf(file_pointer, "%d", found_color);
+//                    fprintf(im_fptr_r, "%d", r);
+//                    fprintf(im_fptr_g, "%d", g);
+//                    fprintf(im_fptr_b, "%d", b);
+//                } else {
+//                    fprintf(file_pointer, ",%d", found_color);
+//                    fprintf(im_fptr_r, ",%d", r);
+//                    fprintf(im_fptr_g, ",%d", g);
+//                    fprintf(im_fptr_b, ",%d", b);
+//            }
         }
-       fprintf(file_pointer, "\n");
-       fprintf(im_fptr_r, "\n");
-       fprintf(im_fptr_g, "\n");
-       fprintf(im_fptr_b, "\n");
+//       fprintf(file_pointer, "\n");
+//       fprintf(im_fptr_r, "\n");
+//       fprintf(im_fptr_g, "\n");
+//       fprintf(im_fptr_b, "\n");
     }
-   fclose(file_pointer);
-   fclose(im_fptr_r);
-   fclose(im_fptr_g);
-   fclose(im_fptr_b);
+//   fclose(file_pointer);
+//   fclose(im_fptr_r);
+//   fclose(im_fptr_g);
+//   fclose(im_fptr_b);
 //    printf("Color count: %d\n", color_count);
 }
 
@@ -627,18 +627,23 @@ float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal,
 void compute_color_viewpane_sums(int viewpanes_vertical, int viewpanes_horizontal, int image_width, int image_height, const unsigned char *image,
                                  int num_colors, int colors[num_colors], float color_sums[viewpanes_vertical], bool bottom_only)
 {
+    float factor = 1;
     for (int i = 0; i < viewpanes_vertical; i++) {
         color_sums[i] = 0;
     }
 
     for (int i = 0; i < num_colors; i++) {
+        factor = 1;
         int color = colors[i];
+        if (color == PURPLE) {
+            factor = 2;
+        }
         int mask_image[image_width][image_height];
         color_mask_image(image, color, image_width, image_height, mask_image);
 
         float *views_vertical = get_views_vertical_mask(viewpanes_vertical,viewpanes_horizontal,image_width,image_height, mask_image, bottom_only);
         for (int j = 0; j < viewpanes_vertical; j++) {
-            color_sums[j] += views_vertical[j];
+            color_sums[j] += factor * views_vertical[j];
         }
         free(views_vertical);
     }
@@ -708,7 +713,7 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
     float left_total_obstacles[viewpanes_vertical];
     analyze_camera_view(viewpanes_vertical, viewpanes_horizontal, left_image_width, left_image_height, left_image,
                         left_total_danger, left_total_berries, left_total_obstacles);
-    
+
     printf("Front camera:\n");
     float front_total_danger[viewpanes_vertical];
     float front_total_berries[viewpanes_vertical];
@@ -731,8 +736,8 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
         if (i > 0 && i < viewpanes_vertical-1) {
           front_danger_sum += front_total_danger[i];
           right_danger_sum += right_total_danger[i];
-          left_danger_sum += left_total_danger[i];  
-        }      
+          left_danger_sum += left_total_danger[i];
+        }
     }
 
     float front_berry_sum = sumOfArray(front_total_berries, viewpanes_vertical);
@@ -744,24 +749,25 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
     float left_obstacle_sum = sumOfArray(left_total_obstacles, viewpanes_vertical);
 
     printf("Front berry sum: %f\n", front_berry_sum);
-    
+
     // bool right_berries_on_boxes = fabs(right_total_obstacles[2] - right_total_berries[2]) > epsilon;
     // bool left_berries_on_boxes = fabs(left_total_obstacles[2] - left_total_berries[2]) > epsilon;
-    
+
     bool right_berries_on_boxes = right_obstacle_sum > 1.5*right_berry_sum;
     bool left_berries_on_boxes = left_obstacle_sum > 1.5*left_berry_sum;
-    
+
     printf("right berries on boxes: %d\n", right_berries_on_boxes);
     printf("left berries on boxes: %d\n", left_berries_on_boxes);
     printf("front obstacles: %f\n", front_obstacle_sum);
-    
-    if (front_berry_sum > params->berry_threshold || 5*front_total_berries[1] > params->berry_threshold) {
+
+    int center_frame = viewpanes_vertical / 2;
+    if (front_berry_sum > params->berry_threshold || 5*front_total_berries[center_frame] > params->berry_threshold) {
         printf("FORWARD\n");
         direction = FORWARD;
-    } else if (right_total_berries[2] > params->berry_threshold) { // only turn if aligned with berry
+    } else if (right_total_berries[center_frame] > params->berry_threshold) { // only turn if aligned with berry
         printf("RIGHT\n");
         direction = RIGHT;
-    } else if (left_total_berries[2] > params->berry_threshold) { // only turn if aligned with berry
+    } else if (left_total_berries[center_frame] > params->berry_threshold) { // only turn if aligned with berry
         printf("LEFT\n");
         direction = LEFT;
     }
@@ -817,7 +823,7 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
 void robot_control(int timer, Control *params)
 {
     // Variables dictating image processing
-    int viewpanes_vertical = 5; // no. of vertical panes to split view
+    int viewpanes_vertical = 7; // no. of vertical panes to split view
     int viewpanes_horizontal = 2; // no. of horizontal panes to split view
 
     int front_image_width = wb_camera_get_width(4); // width of camera 4, $300
@@ -841,7 +847,7 @@ void robot_control(int timer, Control *params)
 
         // override if turning in cycles
         int override_direction = override(params->q);
-        // Turn if stuck 
+        // Turn if stuck
         if (override_direction >= 0){
           printf("OVERRIDING BAD BEHAVIOR\n");
           direction = override_direction;
@@ -856,7 +862,7 @@ void robot_control(int timer, Control *params)
           printf("GETTING UNSTUCK\n");
           direction = LEFT;
         }
-        
+
         // make_turn
         if (direction == RIGHT || direction == LEFT) {
             rotate(direction, &(params->turning), &(params->timesteps), params->q, params->time);
@@ -875,7 +881,7 @@ void robot_control(int timer, Control *params)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
 
   struct Robot robot_info = {100,100};
@@ -891,18 +897,18 @@ int main(int argc, char **argv)
   int pc = 0;
   wb_keyboard_enable(TIME_STEP);
   int timer = 0;
-  
+
   WbNodeRef robot_node = wb_supervisor_node_get_from_def("Youbot");
   WbFieldRef trans_field = wb_supervisor_node_get_field(robot_node, "translation");
-  
+
   get_all_berry_pos();
-  
+
   int robot_not_dead = 1;
-   
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
-  
+
   // sensor choices
 //  wb_accelerometer_enable(1,1);         // test in robot_control
   wb_gps_enable(2,TIME_STEP);           // test in robot_control
@@ -935,27 +941,27 @@ int main(int argc, char **argv)
   parameters->timesteps = 0;
   parameters->stuck_steps = 0;
   parameters->time = 0;
-  parameters->zombie_threshold = 10.0;
+  parameters->zombie_threshold = 20.0;
   parameters->berry_threshold = 0.5;
-  parameters->obstacle_threshold = 10.0;
+  parameters->obstacle_threshold = 15.0;
   parameters->last_info = last_info;
   parameters->current_info = current_info;
   parameters->q = queue_constuct();
-  
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
-  while (robot_not_dead == 1) 
+  while (robot_not_dead == 1)
   {
     if (robot_info.health < 0)
     {
         robot_not_dead = 0;
         printf("ROBOT IS OUT OF HEALTH\n");
     }
-  
+
     if (timer % 2 == 0)
-    {  
+    {
         const double *trans = wb_supervisor_field_get_sf_vec3f(trans_field);
         check_berry_collision(&robot_info, trans[0], trans[2]);
         check_zombie_collision(&robot_info, trans[0], trans[2]);
@@ -963,18 +969,18 @@ int main(int argc, char **argv)
     if (timer == 16)
     {
         update_robot(&robot_info);
-        timer = 0; 
+        timer = 0;
     }
     step();
     int c = keyboard(pc);
     pc = c;
     timer=timer+1;
-    
-    
+
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////// CHANGE CODE BELOW HERE ONLY ////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
+
     // control function called every time step
     if (timer % 16 == 0)
     {
@@ -988,6 +994,10 @@ int main(int argc, char **argv)
       parameters->last_info.energy = robot_info.energy;
     }
     (parameters->time)++;
+
+    if (parameters->time > 100000000000){
+      parameters->time = 0;
+    }
 
     if (parameters->time > 100000000000){
       parameters->time = 0;
