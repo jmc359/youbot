@@ -65,9 +65,9 @@ Functions and definitions for interpreting raw images taken of the local environ
    - evaluated pixel-by-pixel, where each pixel in the mask has the boolean value `in_range(hsv_pixel, target_hsv_color)`.
 
 ### Whole-Image Processing
-- `get_views_vertical()`
-    - splits a given camera image into a `viewpanes_horizontal` by `viewpanes_vertical` grid
-    - currently implemented to split the image into vertical panes and evaluate safety per pane
+- `get_views_vertical_mask()`
+    - splits a color mask into a `viewpanes_horizontal` by `viewpanes_vertical` grid
+    - currently implemented to split the mask into vertical panes and evaluate safety per pane
     - improvements include: (i) calculating an incentive score, which considers berries according the robot's current `last.health` or `last.energy`, (ii) assessing horizontal panes for tree trunk/stump and berry detection, (iii) optimizing color classification methods such as using grayscaling or other color spaces
 
 ## Evaluating Safety
@@ -80,6 +80,20 @@ Functions and definitions for evaluating the safety of the local environment
 - `isStuck()`
    - returns a `bool` of whether the robot is approaching a potential 'stuck' situation (i.e., wall, tree, world edge)
    - can be a factor for safety evaluation of current frame that can be prioritized alongside zombie detection
+- `compute_color_viewpane_sums()`
+   - computes the percentage of panel of a particular object type - zombie, berry, or obstacle - based on an input color collection
+   - a helper function for `analyze_camera_view()` to decrease code duplication
+- `analyze_camera_view()`
+   - computes image masks for zombies, berries, and obstacles for a particular camera (front, left, or right)
+   - modifies 1-D arrays of length `viewpanes_vertical` to track percentage of panel that is 'berry', 'zombie', or 'obstacle'
+- `analyze_cameras()`
+   - for the three cameras used - front, left, and right - synthesize the masked images from all three cameras to determine global behavior
+   - follows a behavior heirarchy as follows:
+      - if a collision is imminent, turn away
+      - otherwise, avoid any visible zombies if they are too close
+      - in safe situations (no impending collision or zombies) move towards visible berries
+      - if no berries visible, drive forward
+   - the activation of each behavior is thresholded by hyperparameters of the system
 - `robot_control()` &rarr; computing safest route
 ```c
 // split view into vertical panes and evaluate safety for each pane
@@ -103,6 +117,9 @@ Helper methods for tests and aforementioned processes
 - `getIndexOfMin()` 
     - returns the index of the minimum element in a given `float` array of `size_t` size
     - useful, alongside return values of safety functions (e.g., `calcZombiness()` and `isStuck()`, for determining the safest pane in view.
+- `getIndexOfMax()` 
+    - returns the index of the maximum element in a given `float` array of `size_t` size
+    - used in determining severity of zombie safety infringement
 - `sumOfArray()`
     - returns a `float` sum of all elements in a `float` array of size `n`
     - useful for calculating safety, a component of which is the total zombieness in a given frame
@@ -121,7 +138,7 @@ Helper methods for tests and aforementioned processes
     - separating zombie avoidance from general safety evaluations
     - creating a priority list for handling zombie avoidance situations, such as choosing between purple versus aqua zombie, staying close to wall or berry location according to the circumstance
 2. **optimizing current image processing**
-    - Sydney?
+    - mostly done - robot is still accurately detecting color maps of zombies and berries and will actively seek berries and avoid zombies (kind of)
 3. **improving wall detection and avoidance**
 4. **optimizing berry detection and collection**
     - creating a global berry map that allows the robot to 'remember' general location of berries
