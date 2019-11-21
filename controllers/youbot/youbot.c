@@ -376,14 +376,20 @@ float calcZombiness(int g, int b){
 #define PINK 5
 #define ORANGE 6
 #define YELLOW 7
+#define WHITE 8
+#define BLACK 9
 
 static int zombie_colors[4] = {BLUE, AQUA, GREEN, PURPLE};
 static int berry_colors[4] = {RED, PINK, ORANGE, YELLOW};
+static int wall_colors[1] = {WHITE};
+static int obstacle_colors[1] = {BLACK};
 
-static int min_colors[8][3] = {{10, 39, 97}, {11, 67, 68}, {10, 52, 16}, {45, 18, 92},
-                               {76, 18, 31}, {62, 38, 67}, {62, 38, 32}, {69, 67, 13}};
-static int max_colors[8][3] = {{28, 111, 198}, {76, 192, 175}, {64, 158, 68}, {115, 49, 185},
-                               {209, 62, 44}, {193, 124, 167}, {194, 124, 85}, {207, 195, 37}};
+static int min_colors[10][3] = {{10, 39, 97}, {11, 67, 68}, {10, 52, 16}, {45, 18, 92},
+                               {76, 18, 31}, {62, 38, 67}, {62, 38, 32}, {69, 67, 13},
+                               {69, 74, 94}, {10, 10, 14}};
+static int max_colors[10][3] = {{28, 111, 198}, {76, 192, 175}, {64, 158, 68}, {115, 49, 185},
+                               {209, 62, 44}, {193, 124, 167}, {194, 124, 85}, {207, 195, 37},
+                               {222, 223, 239}, {35, 35, 37}};
 
 void rgb_to_hsv(int rgb[], double *hsv) {
     double red = rgb[0]/255.0;
@@ -452,68 +458,28 @@ int in_range(double *hsv, double *hsv_compare, double epsilon)
     return color_in_range;
 }
 
-// function for counting matching colored pixels in image given input color range and rgb image
-int color_mask_count(const unsigned char *image, int color, int image_width, int image_height, int save_mask) {
-    double epsilon = 5.0;
-
-    double hsv_min[3];
-    rgb_to_hsv(min_colors[color], hsv_min);
-    double hsv_max[3];
-    rgb_to_hsv(max_colors[color], hsv_max);
-
-    int mask_pixels = 0;
-
-    FILE *file_pointer = NULL;
-    if (save_mask) {
-      file_pointer = fopen("image_mask.txt", "w");
-    }
-
-    // fprintf(file_pointer, "%d,%d", image_height, image_width);
-
-    for (int x = 0; x < image_width; x++) {
-        for (int y = 0; y < image_height; y++) {
-            int r = wb_camera_image_get_red(image, image_width, x, y);
-            int g = wb_camera_image_get_green(image, image_width, x, y);
-            int b = wb_camera_image_get_blue(image, image_width, x, y);
-
-            int rgb[3] = {r, g, b};
-            double hsv[3];
-            rgb_to_hsv(rgb, hsv);
-
-            int in_range_min = in_range(hsv, hsv_min, epsilon);
-            int in_range_max = in_range(hsv, hsv_max, epsilon);
-            int found_color = in_range_min || in_range_max;
-            mask_pixels += found_color;
-
-            if (save_mask) {
-                if (y == 0) {
-                    fprintf(file_pointer, "%d", found_color);
-
-                } else {
-                    fprintf(file_pointer, ",%d", found_color);
-                }
-            }
-        }
-        if (save_mask) {
-          fprintf(file_pointer, "\n");
-        }
-    }
-
-
-    if (save_mask) {
-      fclose(file_pointer);
-    }
-    return mask_pixels;
-}
-
+// create image masked on input color
 void color_mask_image(const unsigned char *image, int color, int image_width, int image_height, int mask_image[image_width][image_height]) {
-    double epsilon = 5.0;
+    double epsilon = 8.0;
 
     double hsv_min[3];
     rgb_to_hsv(min_colors[color], hsv_min);
     double hsv_max[3];
     rgb_to_hsv(max_colors[color], hsv_max);
 
+   // FILE *file_pointer = NULL;
+   // file_pointer = fopen("image_mask.txt", "w");
+
+   // FILE *im_fptr_r = NULL;
+   // im_fptr_r = fopen("image_r.txt", "w");
+
+   // FILE *im_fptr_g = NULL;
+   // im_fptr_g = fopen("image_g.txt", "w");
+
+   // FILE *im_fptr_b = NULL;
+   // im_fptr_b = fopen("image_b.txt", "w");
+
+    // int color_count = 0;
     for (int x = 0; x < image_width; x++) {
         for (int y = 0; y < image_height; y++) {
             int r = wb_camera_image_get_red(image, image_width, x, y);
@@ -527,16 +493,38 @@ void color_mask_image(const unsigned char *image, int color, int image_width, in
             int in_range_min = in_range(hsv, hsv_min, epsilon);
             int in_range_max = in_range(hsv, hsv_max, epsilon);
             int found_color = in_range_min || in_range_max;
-            if (found_color != 1 && found_color != 0) {
-                printf("Found color {%d, %d}: %d", x, y, found_color);
-            }
             mask_image[x][y] = found_color;
+            
+            // color_count += found_color;
 
-            if (mask_image[x][y] != 1 && mask_image[x][y] != 0) {
-                printf("Not matching - {%d, %d}", x, y);
-            }
+            // if (x == 65 && y == 30) {
+                // printf("xy found: {%d, %d, %d}, {%f, %f, %f}\n", r, g, b, hsv[0], hsv[1], hsv[2]);
+                // printf("hsv min: {%f, %f, %f}\n", hsv_min[0], hsv_min[1], hsv_min[2]);
+                // printf("hsv max: {%f, %f, %f}\n", hsv_max[0], hsv_max[1], hsv_max[2]);
+            // }
+
+            // if (y == 0) {
+                    // fprintf(file_pointer, "%d", found_color);
+                    // fprintf(im_fptr_r, "%d", r);
+                    // fprintf(im_fptr_g, "%d", g);
+                    // fprintf(im_fptr_b, "%d", b);
+                // } else {
+                    // fprintf(file_pointer, ",%d", found_color);
+                    // fprintf(im_fptr_r, ",%d", r);
+                    // fprintf(im_fptr_g, ",%d", g);
+                    // fprintf(im_fptr_b, ",%d", b);
+            // }
         }
+       // fprintf(file_pointer, "\n");
+       // fprintf(im_fptr_r, "\n");
+       // fprintf(im_fptr_g, "\n");
+       // fprintf(im_fptr_b, "\n");
     }
+   // fclose(file_pointer);
+   // fclose(im_fptr_r);
+   // fclose(im_fptr_g);
+   // fclose(im_fptr_b);
+   // printf("Color count: %d\n", color_count);
 }
 
 // logic for determining how much zombie in frame
@@ -622,11 +610,32 @@ float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal,
     for (int col = 0; col < viewpanes_horizontal; col++){
       sum += viewpanes[row][col];
     }
-    views_vertical[row] = sum;
+    views_vertical[row] = 100*sum;
   }
   return views_vertical;
 }
 
+// computes a sum over colors by viewpanes
+// this function is for detecting/seeking berries and avoiding zombies and walls
+void compute_color_viewpane_sums(int viewpanes_vertical, int viewpanes_horizontal, int image_width, int image_height, const unsigned char *image,
+                                 int num_colors, int colors[num_colors], float color_sums[viewpanes_vertical])
+{
+    for (int i = 0; i < viewpanes_vertical; i++) {
+        color_sums[i] = 0;
+    }
+
+    for (int i = 0; i < num_colors; i++) {
+        int color = colors[i];
+        int mask_image[image_width][image_height];
+        color_mask_image(image, color, image_width, image_height, mask_image);
+
+        float *views_vertical = get_views_vertical_mask(viewpanes_vertical,viewpanes_horizontal,image_width,image_height, mask_image);
+        for (int j = 0; j < viewpanes_vertical; j++) {
+            color_sums[j] += views_vertical[j];
+        }
+        free(views_vertical);
+    }
+}
 
 /*
  * Main robot control function, called every time step
@@ -635,71 +644,166 @@ float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal,
 typedef struct control{
   double *last_gps;
   int turning, timesteps, stuck_steps;
-  float threshold;
+  float zombie_threshold, berry_threshold, obstacle_threshold;
   Queue *q;
   struct Robot current_info, last_info;
   long long time;
 } Control;
 
+// perform computations to analyze danger/berriness/obstruction of camera view
+void analyze_camera_view(int viewpanes_vertical, int viewpanes_horizontal, int image_width, int image_height, const unsigned char* image,
+                         float total_danger[viewpanes_vertical], float total_berries[viewpanes_vertical], float total_obstacles[viewpanes_vertical])
+{
+    int num_zombie_colors = 4;
+    compute_color_viewpane_sums(viewpanes_vertical, viewpanes_horizontal, image_width, image_height, image,
+                                num_zombie_colors, zombie_colors, total_danger);
+    printf("Total danger: ");
+    print_array(total_danger, viewpanes_vertical);
+
+    // check for berries
+    int num_berry_colors = 4;
+    compute_color_viewpane_sums(viewpanes_vertical, viewpanes_horizontal, image_width, image_height, image,
+                                num_berry_colors, berry_colors, total_berries);
+    printf("Total berries: ");
+    print_array(total_berries, viewpanes_vertical);
+
+    // check for obstacles
+    int num_obstacle_colors = 1;
+    compute_color_viewpane_sums(viewpanes_vertical, viewpanes_horizontal, image_width, image_height, image,
+                                num_obstacle_colors, obstacle_colors, total_obstacles);
+    printf("Total obstacles: ");
+    print_array(total_obstacles, viewpanes_vertical);
+}
+
+int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horizontal, int front_image_width, int front_image_height,
+                    int right_image_width, int right_image_height, int left_image_width, int left_image_height) {
+    const unsigned char *front_image = wb_camera_get_image(4);
+    const unsigned char *right_image = wb_camera_get_image(9);
+    const unsigned char *left_image = wb_camera_get_image(10);
+
+    // printf("Front camera:\n");
+    // float front_total_danger[viewpanes_vertical];
+    // float front_total_berries[viewpanes_vertical];
+    // float front_total_obstacles[viewpanes_vertical];
+    // analyze_camera_view(viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height, front_image,
+                        // front_total_danger, front_total_berries, front_total_obstacles);
+
+    printf("Right camera:\n");
+    float right_total_danger[viewpanes_vertical];
+    float right_total_berries[viewpanes_vertical];
+    float right_total_obstacles[viewpanes_vertical];
+    analyze_camera_view(viewpanes_vertical, viewpanes_horizontal, right_image_width, right_image_height, right_image,
+                        right_total_danger, right_total_berries, right_total_obstacles);
+
+    printf("Left camera:\n");
+    float left_total_danger[viewpanes_vertical];
+    float left_total_berries[viewpanes_vertical];
+    float left_total_obstacles[viewpanes_vertical];
+    analyze_camera_view(viewpanes_vertical, viewpanes_horizontal, left_image_width, left_image_height, left_image,
+                        left_total_danger, left_total_berries, left_total_obstacles);
+    
+    printf("Front camera:\n");
+    float front_total_danger[viewpanes_vertical];
+    float front_total_berries[viewpanes_vertical];
+    float front_total_obstacles[viewpanes_vertical];
+    analyze_camera_view(viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height, front_image,
+                        front_total_danger, front_total_berries, front_total_obstacles);
+
+    // determine direction from camera inputs
+    int direction = FORWARD;
+    float epsilon = 0.5;
+
+    // check for immediate berries
+    float front_berry_sum = 0;
+    float left_berry_sum = 0;
+    float right_berry_sum = 0;
+    float front_obstacle_sum = 0;
+    float right_obstacle_sum = 0;
+    float left_obstacle_sum = 0;
+    for (int i = 0; i < viewpanes_vertical; i++) {
+        front_berry_sum += front_total_berries[i];
+        right_berry_sum += right_total_berries[i];
+        left_berry_sum += left_total_berries[i];
+        front_obstacle_sum += front_total_obstacles[i];
+        right_obstacle_sum += right_total_obstacles[i];
+        left_obstacle_sum += left_total_obstacles[i];
+    }
+    printf("Front berry sum: %f\n", front_berry_sum);
+    
+    // bool right_berries_on_boxes = fabs(right_total_obstacles[2] - right_total_berries[2]) > epsilon;
+    // bool left_berries_on_boxes = fabs(left_total_obstacles[2] - left_total_berries[2]) > epsilon;
+    
+    bool right_berries_on_boxes = right_obstacle_sum > 2*right_berry_sum;
+    bool left_berries_on_boxes = right_obstacle_sum > 2*left_berry_sum;
+    
+    printf("right berries: %d\n", right_berries_on_boxes);
+    printf("left berries: %d\n", left_berries_on_boxes);
+    printf("front obstacles: %f\n", front_obstacle_sum);
+    
+    if (front_berry_sum > params->berry_threshold || 4*front_total_berries[1] > params->berry_threshold) {
+        printf("FORWARD\n");
+        direction = FORWARD;
+    } else if (right_total_berries[2] > params->berry_threshold) { //&& !right_berries_on_boxes) {
+        printf("RIGHT\n");
+        direction = RIGHT;
+    } else if (left_total_berries[2] > params->berry_threshold) { //&& !left_berries_on_boxes) {
+        printf("LEFT\n");
+        direction = LEFT;
+    }
+
+    // zombie avoidance
+    if (front_total_danger[0] > params->zombie_threshold) {
+        printf("FORWARD DANGEROUS\n");
+        if (left_total_danger[0] < right_total_danger[0] && left_total_danger[0] < front_total_danger[0]) {
+            direction = LEFT;
+        } else if (right_total_danger[0] > left_total_danger[0] && right_total_danger[0] < front_total_danger[0]) {
+            direction = RIGHT;
+        } else {
+            direction = FORWARD;
+        }
+    }
+
+    if (front_obstacle_sum > params->obstacle_threshold) {
+        printf("OBSTACLE DETECTED\n");
+        if (left_total_berries > right_total_berries) {
+            direction = LEFT;
+        } else {
+            direction = RIGHT;
+        }
+    }
+
+    return direction;
+}
+
 void robot_control(int timer, Control *params)
 {
     // Variables dictating image processing
-    int viewpanes_vertical = 3; // no. of vertical panes to split view
-    int viewpanes_horizontal = 2; // no. of horizontal panes to split view
-    int image_width = 256; // standard image width
-    int image_height = 128; // standard image height
+    int viewpanes_vertical = 5; // no. of vertical panes to split view
+    int viewpanes_horizontal = 1; // no. of horizontal panes to split view
 
-    const double *gps = wb_gps_get_values(2);
+    int front_image_width = wb_camera_get_width(4); // width of camera 4, $300
+    int front_image_height = wb_camera_get_height(4); // height of camera 4, $300
+
+    int right_image_width = wb_camera_get_width(9); // width of camera 9, $200
+    int right_image_height = wb_camera_get_height(9); // height of camera 9, $200
+
+    int left_image_width = wb_camera_get_width(10); // width of camera 10, $200
+    int left_image_height = wb_camera_get_height(10); // height of camera 10, $200
+
+    const double *gps = wb_gps_get_values(2); // get gps coordinates, $300
     if (timer % 16 == 0) { // n % 16 (different camera parameters now)
-        // get sensor values
-        const double *acceleration = wb_accelerometer_get_values(1);
-        const double *vel = wb_gyro_get_values(12);
-        const double light = wb_light_sensor_get_value(13);
-        const unsigned char *image = wb_camera_get_image(6);
-
         // print sensor values
+        printf("\n");
         printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", gps[0], gps[1], gps[2]);
-        printf("ACCL: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", acceleration[0], acceleration[1], acceleration[2]);
-        printf("COMP: radians = %+.3f, degrees = %+.3f\n", get_bearing_in_radians(), get_bearing_in_degrees());
-        printf("GYRO: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", vel[0], vel[1], vel[2]);
-        printf("LGHT: %.3f\n", light);
 
-        // Mask based on zombie colors
-        float total_danger[viewpanes_vertical];
-        for (int i = 0; i < viewpanes_vertical; i++) {
-            total_danger[i] = 0;
-        }
-
-        for (int i = 0; i < 4; i++) {
-            int color = zombie_colors[i];
-            int mask_image[image_width][image_height];
-            color_mask_image(image, color, image_width, image_height, mask_image);
-
-            float *views_vertical = get_views_vertical_mask(viewpanes_vertical,viewpanes_horizontal,image_width,image_height, mask_image);
-            for (int j = 0; j < 4; j++) {
-                total_danger[j] += views_vertical[j];
-            }
-            free(views_vertical);
-        }
-        printf("Total danger: ");
-        print_array(total_danger, viewpanes_vertical);
-
-        int safest_index = getIndexOfMin(total_danger, 4);
-        int dangerous_index = getIndexOfMax(total_danger, 4);
-        float min_zombieness = total_danger[safest_index];
-        float max_zombieness = total_danger[dangerous_index];
-        double safest_direction = round(((float)safest_index/(viewpanes_vertical - 1)) * 2)/2;
+        int camera_direction = FORWARD;
+        camera_direction = analyze_cameras(params, viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height,
+                                    right_image_width, right_image_height, left_image_width, left_image_height);
 
         // make turn
-        if (max_zombieness > params->threshold){
-          if (safest_direction == 0){
-            printf("ROTATING LEFT\n");
-            rotate(LEFT, &(params->turning), &(params->timesteps), params->q, params->time);
-          }
-          else if (safest_direction == 1){
-            printf("ROTATING RIGHT\n");
-            rotate(RIGHT, &(params->turning), &(params->timesteps), params->q, params->time);
-          }
+        if (camera_direction == RIGHT || camera_direction == LEFT) {
+            printf("ROTATING FROM CAMERA\n");
+            rotate(camera_direction, &(params->turning), &(params->timesteps), params->q, params->time);
         }
 
         // override if turning in cycles
@@ -757,29 +861,22 @@ int main(int argc, char **argv)
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   
   // sensor choices
-  wb_accelerometer_enable(1,1);         // test in robot_control
+//  wb_accelerometer_enable(1,1);         // test in robot_control
   wb_gps_enable(2,TIME_STEP);           // test in robot_control
-  wb_compass_enable(3,TIME_STEP);       // test in robot_control
+//  wb_compass_enable(3,TIME_STEP);       // test in robot_control
   wb_camera_enable(4,TIME_STEP);        // test in robot_control
-  wb_camera_enable(5,TIME_STEP);
-  wb_camera_enable(6,TIME_STEP);
-  wb_camera_enable(7,TIME_STEP);
-  wb_camera_enable(8,TIME_STEP);
+//  wb_camera_enable(5,TIME_STEP);
+//  wb_camera_enable(6,TIME_STEP);
+//  wb_camera_enable(7,TIME_STEP);
+//  wb_camera_enable(8,TIME_STEP);
   wb_camera_enable(9,TIME_STEP);
   wb_camera_enable(10,TIME_STEP);
-  wb_camera_enable(11,TIME_STEP);
-  wb_gyro_enable(12,TIME_STEP);         // test in robot_control
-  wb_light_sensor_enable(13,TIME_STEP); // test in robot control
-  wb_receiver_enable(14,TIME_STEP);     // test in main
-  wb_range_finder_enable(15,TIME_STEP);
-  wb_lidar_enable(16,1);                // RR ?? not fully tested - see main
-  
-  // RR ?? testing lidar -- what about testing info extraction from point cloud? 
-  WbDeviceTag lidar = wb_robot_get_device("lidar");
-  wb_lidar_enable_point_cloud(lidar);
-
-  //testing receiver -- see main
-  //WbDeviceTag rec = wb_robot_get_device("receiver");
+//  wb_camera_enable(11,TIME_STEP);
+//  wb_gyro_enable(12,TIME_STEP);         // test in robot_control
+//  wb_light_sensor_enable(13,TIME_STEP); // test in robot control
+//  wb_receiver_enable(14,TIME_STEP);     // test in main
+//  wb_range_finder_enable(15,TIME_STEP);
+//  wb_lidar_enable(16,1);                // RR ?? not fully tested - see main
 
   // Robot info structs
   struct Robot last_info = {100,100};
@@ -795,7 +892,9 @@ int main(int argc, char **argv)
   parameters->timesteps = 0;
   parameters->stuck_steps = 0;
   parameters->time = 0;
-  parameters->threshold = 0.3;
+  parameters->zombie_threshold = 10.0;
+  parameters->berry_threshold = 0.5;
+  parameters->obstacle_threshold = 10.0;
   parameters->last_info = last_info;
   parameters->current_info = current_info;
   parameters->q = queue_constuct();
