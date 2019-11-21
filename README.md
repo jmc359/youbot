@@ -54,9 +54,15 @@ Functions and definitions for interpreting raw images taken of the local environ
 - `grayDeviation()`
     - returns how unlike gray a given rgb value is, the standard deviation of the `r`, `g`, and `b` values
     - can be implemented as a detector of 'stuck' situations. For example, the edge of the world is gray, a tree trunk/stump is black, and a wall can be any shade of gray depending on light source angling
-- `rgb_to_hsv()` - Sydney?
-- `in_range()` - Sydney?
-- `color_mask_count()` - Sydney?
+- `rgb_to_hsv()
+   - converts RGB color scheme to HSV for more accurate color comparison across shadows
+   - modifies a pointer to hsv[3] array with the corresponding hue, saturation, and value components
+- `in_range()
+   - determines whether a color is within `hue_epsilon` of target hue and `epsilon` of target saturation and value for a given color
+   - built to be a helper function for `color_mask_image()`, as it is used to compare each pixel value to target colors for zombies, berries, walls, obstacles, etc.
+- `color_mask_image()
+   - creates a binary mask for a particular image of size `image_height` x `image_width` by comparing image pixel values with given RGB comparison color
+   - evaluated pixel-by-pixel, where each pixel in the mask has the boolean value `in_range(hsv_pixel, target_hsv_color)`.
 
 ### Whole-Image Processing
 - `get_views_vertical()`
