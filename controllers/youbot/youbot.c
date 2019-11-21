@@ -101,7 +101,8 @@ void turn_right()
 
 // Link in queue
 typedef struct turn{
-  int direction, steps;
+  int direction;
+  long long steps;
   struct turn *next;
 } Turn;
 
@@ -127,8 +128,22 @@ int queue_length(Queue *q){
   return q->n;
 }
 
+// dequeue element from q
+Turn *dequeue(Queue *q){
+  if (q->n > 0){
+    Turn *t = q->head;
+    q->head = t->next;
+    q->n--;
+    return t;
+  }
+  else{
+    printf("ERROR: Tried to dequeue from empty queue!");
+    return 0;
+  }
+}
+
 // enqueue struct turn to q
-void enqueue(Queue *q, int direction, int steps){
+void enqueue(Queue *q, int direction, long long steps){
   Turn *t = malloc(sizeof(Turn));
   t->next = 0;
   t->direction = direction;
@@ -142,14 +157,18 @@ void enqueue(Queue *q, int direction, int steps){
     q->tail = t;
   }
   q->n++;
+  if (q->n > 3){
+    Turn *tmp = dequeue(q);
+    free(tmp);
+  }
 }
 
-// dequeue element from q
-Turn *dequeue(Queue *q){
+void print_queue(Queue *q){
   Turn *t = q->head;
-  q->head = t->next;
-  q->n--;
-  return t;
+  while (t != NULL){
+    printf("TURN: %d TIME: %lld\n", t->direction, t->steps);
+    t = t->next;
+  }
 }
 
 // destroy queue
@@ -251,10 +270,11 @@ double get_bearing_in_radians() {
 // Initiates turning the robot
 // rotate_update() waits the proper amount of time
 // after this function is called
-void rotate(int direction, int *turning, int *timesteps){
+void rotate(int direction, int *turning, int *timesteps, Queue *q, long long time){
   if ((*timesteps) == 0){ // Initiate turn at first timestep
     stop();
     (*turning) = 1;
+    enqueue(q, direction, time);
     switch(direction){
       case LEFT:  turn_right(); break; // **original functions are swapped**
       case RIGHT: turn_left(); break;
@@ -287,7 +307,7 @@ void translate(int direction, int *turning){
 }
 
 // handles getting stuck near edge of world/wall/etc.
-void handle_stuck(double *last_gps, const double *gps, int *steps, int *turning, int *timesteps){
+int is_stuck(double *last_gps, const double *gps, int *steps, int *turning, int *timesteps){
   double diff0 = fabs(gps[0] - last_gps[0]);
   double diff1 = fabs(gps[1] - last_gps[1]);
   double diff2 = fabs(gps[2] - last_gps[2]);
@@ -298,8 +318,7 @@ void handle_stuck(double *last_gps, const double *gps, int *steps, int *turning,
         (*steps)++;
       }
       else{
-        printf("GETTING UNSTUCK\n");
-        rotate(RIGHT, turning, timesteps);
+        return 1;
       }
     }
     else{
@@ -309,6 +328,7 @@ void handle_stuck(double *last_gps, const double *gps, int *steps, int *turning,
   else{
     (*steps) = 0;
   }
+  return 0;
 }
 
 /*
@@ -591,7 +611,8 @@ float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal,
  * Main robot control function, called every time step
  */
 void robot_control(int timer, int *turning, int *timesteps, float threshold,
-                   struct Robot last, struct Robot current, double *last_gps, int *stuck_steps)
+                   struct Robot last, struct Robot current, double *last_gps, 
+                   int *stuck_steps, Queue *q, long long time)
 {
     // Variables dictating image processing
     int viewpanes_vertical = 3; // no. of vertical panes to split view
@@ -647,14 +668,18 @@ void robot_control(int timer, int *turning, int *timesteps, float threshold,
         if (max_zombieness > threshold){
           if (safest_direction == 0){
             printf("ROTATING LEFT\n");
-            rotate(LEFT, turning, timesteps);
+            rotate(LEFT, turning, timesteps, q, time);
           }
           else if (safest_direction == 1){
             printf("ROTATING RIGHT\n");
-            rotate(RIGHT, turning, timesteps);
+            rotate(RIGHT, turning, timesteps, q, time);
           }
         }
-        handle_stuck(last_gps, gps, stuck_steps, turning, timesteps);
+        // Get unstuck from walls/trees/edges/etc.
+        if (is_stuck(last_gps, gps, stuck_steps, turning, timesteps)){
+          printf("GETTING UNSTUCK\n");
+          rotate(LEFT, turning, timesteps, q, time);
+        }
     }
     translate(FORWARD, turning);
     rotate_update(turning, timesteps);
@@ -733,10 +758,13 @@ int main(int argc, char **argv)
   // GPS info
   int stuck_steps = 0;
   double *last_gps = malloc(sizeof(double) * 3);
+  long long time = 0;
   last_gps[0] = 0;
   last_gps[1] = 0;
   last_gps[2] = 0;
-    
+
+  // Queue keeping track of turn history
+  Queue *q = queue_constuct();
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -770,15 +798,21 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     // control function called every time step
-    robot_control(timer, &turning, &timesteps, threshold, last_info, robot_info, last_gps, &stuck_steps);
+    robot_control(timer, &turning, &timesteps, threshold, last_info, robot_info, last_gps, &stuck_steps, q, time);
     last_info.health = robot_info.health;
     last_info.energy = robot_info.energy;
+    time++;
+
+    if (time > 100000000000){
+      time = 0;
+    }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
   }
   free(last_gps);
+  queue_destroy(q);
   wb_robot_cleanup();
 
   return 0;
