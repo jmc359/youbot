@@ -163,6 +163,7 @@ void enqueue(Queue *q, int direction, long long steps){
   }
 }
 
+// print elements of queue
 void print_queue(Queue *q){
   Turn *t = q->head;
   while (t != NULL){
@@ -178,6 +179,25 @@ void queue_destroy(Queue *q){
     free(tmp);
   }
 }
+
+// override bad turning behavior
+int override(Queue *q){
+  if (q->n > 1){
+    Turn *t = q->head;
+    int override = 1;
+    for (int i = 0; i < q->n-1; i++){
+      if (t->next->steps - t->steps > 300 || t->next->direction == t->direction){
+        override = 0;
+      }
+      t = t->next;
+    }
+    if (override){
+      return t->direction;
+    }
+  }
+  return -1;
+}
+
 
 /*
  * Helper functions for printing/creating/returning min of arrays
@@ -330,6 +350,7 @@ int is_stuck(double *last_gps, const double *gps, int *steps, int *turning, int 
   }
   return 0;
 }
+
 
 /*
  * Functions for safety/zombie logic
@@ -680,6 +701,14 @@ void robot_control(int timer, Control *params)
             rotate(RIGHT, &(params->turning), &(params->timesteps), params->q, params->time);
           }
         }
+
+        // override if turning in cycles
+        int direction = override(params->q);
+        if (direction >= 0){
+          printf("OVERRIDING BAD BEHAVIOR\n");
+          rotate(direction, &(params->turning), &(params->timesteps), params->q, params->time);
+        }
+
         // Get unstuck from walls/trees/edges/etc.
         if (is_stuck(params->last_gps, gps, &(params->stuck_steps), &(params->turning), &(params->timesteps))){
           printf("GETTING UNSTUCK\n");
@@ -752,6 +781,7 @@ int main(int argc, char **argv)
   //testing receiver -- see main
   //WbDeviceTag rec = wb_robot_get_device("receiver");
 
+  // Robot info structs
   struct Robot last_info = {100,100};
   struct Robot current_info = {100,100};
 
@@ -804,7 +834,8 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     // control function called every time step
-    // robot_control(timer, &turning, &timesteps, threshold, last_info, robot_info, last_gps, &stuck_steps, q, time);
+    parameters->current_info.health = robot_info.health;
+    parameters->current_info.energy = robot_info.energy;
     robot_control(timer, parameters);
     parameters->last_info.health = robot_info.health;
     parameters->last_info.energy = robot_info.energy;
