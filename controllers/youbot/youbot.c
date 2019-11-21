@@ -982,27 +982,21 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // control function called every time step
-    if (timer % 16 == 0)
-    {
-      parameters->current_info.health = robot_info.health;
-      parameters->current_info.energy = robot_info.energy;
-    }
+    
+    parameters->current_info.health = robot_info.health;
+    parameters->current_info.energy = robot_info.energy;
+
     robot_control(timer, parameters);
-    if (timer % 16 == 0)
-    {
-      parameters->last_info.health = robot_info.health;
-      parameters->last_info.energy = robot_info.energy;
-    }
+    
+    parameters->last_info.health = robot_info.health;
+    parameters->last_info.energy = robot_info.energy;
+    
     (parameters->time)++;
 
     if (parameters->time > 100000000000){
       parameters->time = 0;
     }
-
-    if (parameters->time > 100000000000){
-      parameters->time = 0;
-    }
-
+    
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
