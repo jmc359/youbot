@@ -610,9 +610,17 @@ float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal,
 /*
  * Main robot control function, called every time step
  */
-void robot_control(int timer, int *turning, int *timesteps, float threshold,
-                   struct Robot last, struct Robot current, double *last_gps, 
-                   int *stuck_steps, Queue *q, long long time)
+
+typedef struct control{
+  double *last_gps;
+  int turning, timesteps, stuck_steps;
+  float threshold;
+  Queue *q;
+  struct Robot current_info, last_info;
+  long long time;
+} Control;
+
+void robot_control(int timer, Control *params)
 {
     // Variables dictating image processing
     int viewpanes_vertical = 3; // no. of vertical panes to split view
@@ -635,7 +643,6 @@ void robot_control(int timer, int *turning, int *timesteps, float threshold,
         printf("GYRO: [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", vel[0], vel[1], vel[2]);
         printf("LGHT: %.3f\n", light);
 
-
         // Mask based on zombie colors
         float total_danger[viewpanes_vertical];
         for (int i = 0; i < viewpanes_vertical; i++) {
@@ -656,36 +663,34 @@ void robot_control(int timer, int *turning, int *timesteps, float threshold,
         printf("Total danger: ");
         print_array(total_danger, viewpanes_vertical);
 
-
         int safest_index = getIndexOfMin(total_danger, 4);
         int dangerous_index = getIndexOfMax(total_danger, 4);
         float min_zombieness = total_danger[safest_index];
         float max_zombieness = total_danger[dangerous_index];
-
         double safest_direction = round(((float)safest_index/(viewpanes_vertical - 1)) * 2)/2;
 
         // make turn
-        if (max_zombieness > threshold){
+        if (max_zombieness > params->threshold){
           if (safest_direction == 0){
             printf("ROTATING LEFT\n");
-            rotate(LEFT, turning, timesteps, q, time);
+            rotate(LEFT, &(params->turning), &(params->timesteps), params->q, params->time);
           }
           else if (safest_direction == 1){
             printf("ROTATING RIGHT\n");
-            rotate(RIGHT, turning, timesteps, q, time);
+            rotate(RIGHT, &(params->turning), &(params->timesteps), params->q, params->time);
           }
         }
         // Get unstuck from walls/trees/edges/etc.
-        if (is_stuck(last_gps, gps, stuck_steps, turning, timesteps)){
+        if (is_stuck(params->last_gps, gps, &(params->stuck_steps), &(params->turning), &(params->timesteps))){
           printf("GETTING UNSTUCK\n");
-          rotate(LEFT, turning, timesteps, q, time);
+          rotate(LEFT, &(params->turning), &(params->timesteps), params->q, params->time);
         }
     }
-    translate(FORWARD, turning);
-    rotate_update(turning, timesteps);
-    last_gps[0] = (double)gps[0];
-    last_gps[1] = (double)gps[1];
-    last_gps[2] = (double)gps[2];
+    translate(FORWARD, &(params->turning));
+    rotate_update(&(params->turning), &(params->timesteps));
+    params->last_gps[0] = (double)gps[0];
+    params->last_gps[1] = (double)gps[1];
+    params->last_gps[2] = (double)gps[2];
 }
 
 
@@ -747,24 +752,25 @@ int main(int argc, char **argv)
   //testing receiver -- see main
   //WbDeviceTag rec = wb_robot_get_device("receiver");
 
-  // Variables dictating turning
-  int turning = 0; // bool for turning
-  int timesteps = 0; // how many timesteps into current turn
-  float threshold = 0.3; // threshold for initiating turn
-
-  // robot health and info
   struct Robot last_info = {100,100};
+  struct Robot current_info = {100,100};
 
-  // GPS info
-  int stuck_steps = 0;
-  double *last_gps = malloc(sizeof(double) * 3);
-  long long time = 0;
-  last_gps[0] = 0;
-  last_gps[1] = 0;
-  last_gps[2] = 0;
+  // Parameters fed to control function
+  Control* parameters = malloc(sizeof(Control));
+  parameters->last_gps = malloc(sizeof(double) * 3);
+  parameters->last_gps[0] = 0;
+  parameters->last_gps[1] = 0;
+  parameters->last_gps[2] = 0;
+  parameters->turning = 0;
+  parameters->timesteps = 0;
+  parameters->stuck_steps = 0;
+  parameters->time = 0;
+  parameters->threshold = 0.3;
+  parameters->last_info = last_info;
+  parameters->current_info = current_info;
+  parameters->q = queue_constuct();
+  
 
-  // Queue keeping track of turn history
-  Queue *q = queue_constuct();
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -798,21 +804,23 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     // control function called every time step
-    robot_control(timer, &turning, &timesteps, threshold, last_info, robot_info, last_gps, &stuck_steps, q, time);
-    last_info.health = robot_info.health;
-    last_info.energy = robot_info.energy;
-    time++;
+    // robot_control(timer, &turning, &timesteps, threshold, last_info, robot_info, last_gps, &stuck_steps, q, time);
+    robot_control(timer, parameters);
+    parameters->last_info.health = robot_info.health;
+    parameters->last_info.energy = robot_info.energy;
+    (parameters->time)++;
 
-    if (time > 100000000000){
-      time = 0;
+    if (parameters->time > 100000000000){
+      parameters->time = 0;
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
   }
-  free(last_gps);
-  queue_destroy(q);
+  free(parameters->last_gps);
+  queue_destroy(parameters->q);
+  free(parameters);
   wb_robot_cleanup();
 
   return 0;
