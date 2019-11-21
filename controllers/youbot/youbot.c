@@ -251,7 +251,7 @@ float sumOfArray(float a[], int n) {
 
   for(int i = 0; i < n; i++) {
     sum += a[i];
-    printf("@i=%d, a[i]=%f, sum=%f\n", i, a[i], sum); // hm... uncomment this and you get a different sum...
+//    printf("@i=%d, a[i]=%f, sum=%f\n", i, a[i], sum); // hm... uncomment this and you get a different sum...
   }
 
   return sum;
@@ -448,9 +448,9 @@ void rgb_to_hsv(int rgb[], double *hsv) {
 }
 
 // function computing whether given hsv value is close to given value
-int in_range(double *hsv, double *hsv_compare, double epsilon)
+int in_range(double *hsv, double *hsv_compare, double hue_epsilon, double epsilon)
 {
-    int h_valid = abs((int)hsv_compare[0] - (int)hsv[0])%360 < epsilon;
+    int h_valid = abs((int)hsv_compare[0] - (int)hsv[0])%360 < hue_epsilon;
     int s_valid = fabs(hsv_compare[1] - hsv[1]) < epsilon;
     int v_valid = fabs(hsv_compare[2] - hsv[2]) < epsilon;
 
@@ -460,24 +460,25 @@ int in_range(double *hsv, double *hsv_compare, double epsilon)
 
 // create image masked on input color
 void color_mask_image(const unsigned char *image, int color, int image_width, int image_height, int mask_image[image_width][image_height]) {
-    double epsilon = 5.0;
+    double hue_epsilon = 5.0;
+    double epsilon = 20.0;
 
     double hsv_min[3];
     rgb_to_hsv(min_colors[color], hsv_min);
     double hsv_max[3];
     rgb_to_hsv(max_colors[color], hsv_max);
 
-//   FILE *file_pointer = NULL;
-//   file_pointer = fopen("image_mask.txt", "w");
-//
-//   FILE *im_fptr_r = NULL;
-//   im_fptr_r = fopen("image_r.txt", "w");
-//
-//   FILE *im_fptr_g = NULL;
-//   im_fptr_g = fopen("image_g.txt", "w");
-//
-//   FILE *im_fptr_b = NULL;
-//   im_fptr_b = fopen("image_b.txt", "w");
+   FILE *file_pointer = NULL;
+   file_pointer = fopen("image_mask.txt", "w");
+
+   FILE *im_fptr_r = NULL;
+   im_fptr_r = fopen("image_r.txt", "w");
+
+   FILE *im_fptr_g = NULL;
+   im_fptr_g = fopen("image_g.txt", "w");
+
+   FILE *im_fptr_b = NULL;
+   im_fptr_b = fopen("image_b.txt", "w");
 
     // int color_count = 0;
     for (int x = 0; x < image_width; x++) {
@@ -490,8 +491,8 @@ void color_mask_image(const unsigned char *image, int color, int image_width, in
             double hsv[3];
             rgb_to_hsv(rgb, hsv);
 
-            int in_range_min = in_range(hsv, hsv_min, epsilon);
-            int in_range_max = in_range(hsv, hsv_max, epsilon);
+            int in_range_min = in_range(hsv, hsv_min, hue_epsilon, epsilon);
+            int in_range_max = in_range(hsv, hsv_max, hue_epsilon, epsilon);
             int found_color = in_range_min || in_range_max;
             mask_image[x][y] = found_color;
             
@@ -503,28 +504,28 @@ void color_mask_image(const unsigned char *image, int color, int image_width, in
                 // printf("hsv max: {%f, %f, %f}\n", hsv_max[0], hsv_max[1], hsv_max[2]);
             // }
 
-//            if (y == 0) {
-//                    fprintf(file_pointer, "%d", found_color);
-//                    fprintf(im_fptr_r, "%d", r);
-//                    fprintf(im_fptr_g, "%d", g);
-//                    fprintf(im_fptr_b, "%d", b);
-//                } else {
-//                    fprintf(file_pointer, ",%d", found_color);
-//                    fprintf(im_fptr_r, ",%d", r);
-//                    fprintf(im_fptr_g, ",%d", g);
-//                    fprintf(im_fptr_b, ",%d", b);
-//            }
+            if (y == 0) {
+                    fprintf(file_pointer, "%d", found_color);
+                    fprintf(im_fptr_r, "%d", r);
+                    fprintf(im_fptr_g, "%d", g);
+                    fprintf(im_fptr_b, "%d", b);
+                } else {
+                    fprintf(file_pointer, ",%d", found_color);
+                    fprintf(im_fptr_r, ",%d", r);
+                    fprintf(im_fptr_g, ",%d", g);
+                    fprintf(im_fptr_b, ",%d", b);
+            }
         }
-//       fprintf(file_pointer, "\n");
-//       fprintf(im_fptr_r, "\n");
-//       fprintf(im_fptr_g, "\n");
-//       fprintf(im_fptr_b, "\n");
+       fprintf(file_pointer, "\n");
+       fprintf(im_fptr_r, "\n");
+       fprintf(im_fptr_g, "\n");
+       fprintf(im_fptr_b, "\n");
     }
-//   fclose(file_pointer);
-//   fclose(im_fptr_r);
-//   fclose(im_fptr_g);
-//   fclose(im_fptr_b);
-   // printf("Color count: %d\n", color_count);
+   fclose(file_pointer);
+   fclose(im_fptr_r);
+   fclose(im_fptr_g);
+   fclose(im_fptr_b);
+//    printf("Color count: %d\n", color_count);
 }
 
 // logic for determining how much zombie in frame
@@ -569,7 +570,7 @@ bool isStuck(int r, int g, int b){
 }
 
 // return vertical panes from image
-float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal, int image_width, int image_height, int mask_array[image_width][image_height]){
+float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal, int image_width, int image_height, int mask_array[image_width][image_height], bool bottom_only){
   float viewpanes[viewpanes_vertical][viewpanes_horizontal];
   for (int vx = 0; vx < viewpanes_vertical; vx++){
     for (int vy = 0; vy < viewpanes_horizontal; vy++){
@@ -607,8 +608,14 @@ float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal,
   // float views_vertical[viewpanes_vertical];
   for (int row = 0; row < viewpanes_vertical; row++){
     float sum = 0;
-    for (int col = 0; col < viewpanes_horizontal; col++){
-      sum += viewpanes[row][col];
+    if (bottom_only) {
+        for (int col = 1; col < viewpanes_horizontal; col++){
+          sum += viewpanes[row][col];
+        }
+    } else {
+        for (int col = 0; col < viewpanes_horizontal; col++){
+          sum += viewpanes[row][col];
+        }
     }
     views_vertical[row] = 100*sum;
   }
@@ -618,7 +625,7 @@ float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal,
 // computes a sum over colors by viewpanes
 // this function is for detecting/seeking berries and avoiding zombies and walls
 void compute_color_viewpane_sums(int viewpanes_vertical, int viewpanes_horizontal, int image_width, int image_height, const unsigned char *image,
-                                 int num_colors, int colors[num_colors], float color_sums[viewpanes_vertical])
+                                 int num_colors, int colors[num_colors], float color_sums[viewpanes_vertical], bool bottom_only)
 {
     for (int i = 0; i < viewpanes_vertical; i++) {
         color_sums[i] = 0;
@@ -629,7 +636,7 @@ void compute_color_viewpane_sums(int viewpanes_vertical, int viewpanes_horizonta
         int mask_image[image_width][image_height];
         color_mask_image(image, color, image_width, image_height, mask_image);
 
-        float *views_vertical = get_views_vertical_mask(viewpanes_vertical,viewpanes_horizontal,image_width,image_height, mask_image);
+        float *views_vertical = get_views_vertical_mask(viewpanes_vertical,viewpanes_horizontal,image_width,image_height, mask_image, bottom_only);
         for (int j = 0; j < viewpanes_vertical; j++) {
             color_sums[j] += views_vertical[j];
         }
@@ -656,21 +663,21 @@ void analyze_camera_view(int viewpanes_vertical, int viewpanes_horizontal, int i
 {
     int num_zombie_colors = 4;
     compute_color_viewpane_sums(viewpanes_vertical, viewpanes_horizontal, image_width, image_height, image,
-                                num_zombie_colors, zombie_colors, total_danger);
+                                num_zombie_colors, zombie_colors, total_danger, 0);
     printf("Total danger: ");
     print_array(total_danger, viewpanes_vertical);
 
     // check for berries
     int num_berry_colors = 4;
     compute_color_viewpane_sums(viewpanes_vertical, viewpanes_horizontal, image_width, image_height, image,
-                                num_berry_colors, berry_colors, total_berries);
+                                num_berry_colors, berry_colors, total_berries, 1);
     printf("Total berries: ");
     print_array(total_berries, viewpanes_vertical);
 
     // check for obstacles
     int num_obstacle_colors = 1;
     compute_color_viewpane_sums(viewpanes_vertical, viewpanes_horizontal, image_width, image_height, image,
-                                num_obstacle_colors, obstacle_colors, total_obstacles);
+                                num_obstacle_colors, obstacle_colors, total_obstacles, 0);
     printf("Total obstacles: ");
     print_array(total_obstacles, viewpanes_vertical);
 }
@@ -709,8 +716,8 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
     analyze_camera_view(viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height, front_image,
                         front_total_danger, front_total_berries, front_total_obstacles);
 
-//    int mask_image[front_image_width][front_image_height];
-//    color_mask_image(front_image, BLACK, front_image_width, front_image_height, mask_image);
+    int mask_image[front_image_width][front_image_height];
+    color_mask_image(left_image, PINK, front_image_width, front_image_height, mask_image);
 
     // determine direction from camera inputs
     int direction = FORWARD;
@@ -719,28 +726,23 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
     float front_danger_sum = 0;
     float right_danger_sum = 0;
     float left_danger_sum = 0;
-    float front_berry_sum = 0;
-    float left_berry_sum = 0;
-    float right_berry_sum = 0;
-    float front_obstacle_sum = 0;
-    float right_obstacle_sum = 0;
-    float left_obstacle_sum = 0;
-    
+
     for (int i = 0; i < viewpanes_vertical; i++) {
         if (i > 0 && i < viewpanes_vertical-1) {
           front_danger_sum += front_total_danger[i];
           right_danger_sum += right_total_danger[i];
           left_danger_sum += left_total_danger[i];  
         }      
-        
-        front_berry_sum += front_total_berries[i];
-        right_berry_sum += right_total_berries[i];
-        left_berry_sum += left_total_berries[i];
-        
-        front_obstacle_sum += front_total_obstacles[i];
-        right_obstacle_sum += right_total_obstacles[i];
-        left_obstacle_sum += left_total_obstacles[i];
     }
+
+    float front_berry_sum = sumOfArray(front_total_berries, viewpanes_vertical);
+    float right_berry_sum = sumOfArray(right_total_berries, viewpanes_vertical);
+    float left_berry_sum = sumOfArray(left_total_berries, viewpanes_vertical);
+
+    float front_obstacle_sum = sumOfArray(front_total_obstacles, viewpanes_vertical);
+    float right_obstacle_sum = sumOfArray(right_total_obstacles, viewpanes_vertical);
+    float left_obstacle_sum = sumOfArray(left_total_obstacles, viewpanes_vertical);
+
     printf("Front berry sum: %f\n", front_berry_sum);
     
     // bool right_berries_on_boxes = fabs(right_total_obstacles[2] - right_total_berries[2]) > epsilon;
@@ -749,17 +751,17 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
     bool right_berries_on_boxes = right_obstacle_sum > 1.5*right_berry_sum;
     bool left_berries_on_boxes = left_obstacle_sum > 1.5*left_berry_sum;
     
-    printf("right berries: %d\n", right_berries_on_boxes);
-    printf("left berries: %d\n", left_berries_on_boxes);
+    printf("right berries on boxes: %d\n", right_berries_on_boxes);
+    printf("left berries on boxes: %d\n", left_berries_on_boxes);
     printf("front obstacles: %f\n", front_obstacle_sum);
     
     if (front_berry_sum > params->berry_threshold || 5*front_total_berries[1] > params->berry_threshold) {
         printf("FORWARD\n");
         direction = FORWARD;
-    } else if (right_total_berries[2] > params->berry_threshold) { // && !right_berries_on_boxes) {
+    } else if (right_total_berries[2] > params->berry_threshold) { // only turn if aligned with berry
         printf("RIGHT\n");
         direction = RIGHT;
-    } else if (left_total_berries[2] > params->berry_threshold) { // && !left_berries_on_boxes) {
+    } else if (left_total_berries[2] > params->berry_threshold) { // only turn if aligned with berry
         printf("LEFT\n");
         direction = LEFT;
     }
@@ -776,15 +778,39 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
         }
     }
 
-    // if (front_obstacle_sum > params->obstacle_threshold) {
-        // printf("OBSTACLE DETECTED\n");
-        // if (left_total_berries > right_total_berries) {
-            // direction = LEFT;
-        // } else {
-            // direction = RIGHT;
-        // }
-    // }
+     if (front_obstacle_sum > params->obstacle_threshold) {
+         printf("OBSTACLE DETECTED\n");
+         if (left_total_berries > right_total_berries) {
+             direction = LEFT;
+         } else {
+             direction = RIGHT;
+         }
+     }
 
+     // correct for bad planned turns
+     int front_dangerous = front_danger_sum > params->zombie_threshold || front_obstacle_sum > params->obstacle_threshold;
+     int right_dangerous = right_danger_sum > params->zombie_threshold || right_obstacle_sum > params->obstacle_threshold;
+     int left_dangerous = left_danger_sum > params->zombie_threshold || left_obstacle_sum > params->obstacle_threshold;
+
+     if ((direction == LEFT && left_dangerous)|| (direction == RIGHT && right_dangerous)) {
+        printf("MAKING CORRECTION\n");
+        if (!front_dangerous) {
+            direction = FORWARD;
+        } else if (!right_dangerous) {
+            direction = RIGHT;
+        } else if (!left_dangerous) {
+            direction = LEFT;
+        } else {
+            if (front_obstacle_sum < params->obstacle_threshold) {
+                direction = FORWARD;
+            } else {
+                float lr_obstacles[] = {left_obstacle_sum, right_obstacle_sum};
+                direction = getIndexOfMin(lr_obstacles, 2);
+            }
+        }
+     }
+
+    printf("DIRECTION: %d\n", direction);
     return direction;
 }
 
@@ -792,7 +818,7 @@ void robot_control(int timer, Control *params)
 {
     // Variables dictating image processing
     int viewpanes_vertical = 5; // no. of vertical panes to split view
-    int viewpanes_horizontal = 1; // no. of horizontal panes to split view
+    int viewpanes_horizontal = 2; // no. of horizontal panes to split view
 
     int front_image_width = wb_camera_get_width(4); // width of camera 4, $300
     int front_image_height = wb_camera_get_height(4); // height of camera 4, $300
@@ -809,27 +835,31 @@ void robot_control(int timer, Control *params)
         printf("\n");
         printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", gps[0], gps[1], gps[2]);
 
-        int camera_direction = FORWARD;
-        camera_direction = analyze_cameras(params, viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height,
+        int direction = FORWARD;
+        direction = analyze_cameras(params, viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height,
                                     right_image_width, right_image_height, left_image_width, left_image_height);
 
-        // make turn
-        if (camera_direction == RIGHT || camera_direction == LEFT) {
-            printf("ROTATING FROM CAMERA\n");
-            rotate(camera_direction, &(params->turning), &(params->timesteps), params->q, params->time);
+        // if losing health from zombie, run forward
+        if (params->last_info.health - params->current_info.health == 8) {
+            printf("OVERRIDING TO RUN\n");
+            direction = FORWARD;
         }
-
         // override if turning in cycles
-        int direction = override(params->q);
-        if (direction >= 0){
+        int override_direction = override(params->q);
+        if (override_direction >= 0){
           printf("OVERRIDING BAD BEHAVIOR\n");
-          rotate(direction, &(params->turning), &(params->timesteps), params->q, params->time);
+          direction = override_direction;
         }
 
         // Get unstuck from walls/trees/edges/etc.
         if (is_stuck(params->last_gps, gps, &(params->stuck_steps), &(params->turning), &(params->timesteps))){
           printf("GETTING UNSTUCK\n");
-          rotate(LEFT, &(params->turning), &(params->timesteps), params->q, params->time);
+          direction = LEFT;
+        }
+
+        // make_turn
+        if (direction == RIGHT || direction == LEFT) {
+            rotate(direction, &(params->turning), &(params->timesteps), params->q, params->time);
         }
     }
     translate(FORWARD, &(params->turning));
