@@ -245,14 +245,12 @@ void print_array(float array[], int size) {
     printf("\n");
 }
 
-// RR - this need more testing...
+// calculate sum of all elements in given float array
 float sumOfArray(float a[], int n) {
   float sum = 0;
 
-  for(int i = 0; i < n; i++) {
+  for(int i = 0; i < n; i++)
     sum += a[i];
-//    printf("@i=%d, a[i]=%f, sum=%f\n", i, a[i], sum); // hm... uncomment this and you get a different sum...
-  }
 
   return sum;
 }
@@ -768,13 +766,19 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
         //left_incentive += 1;
     //}
     
+    
+    // adjust sensitivity to berries according to current health
+    float remaining_energy = (100-params->current_info.energy)/100.0;
+    float berry_sensitivity = (remaining_energy > params->berry_threshold) ? remaining_energy : params->berry_sensitivity; 
+    printf("remaining_energy = %.3f, berry_sensitivity = %.2f\n", remaining_energy, berry_sensitivity);
+    
     // determine berry incentive 
     if (left_total_berries[center_frame] > right_total_berries[center_frame] && left_total_berries[center_frame] > front_berry_sum) {
-        left_incentive += params->berry_sensitivity;
+        left_incentive += berry_sensitivity;
     } else if (right_total_berries[center_frame] > left_total_berries[center_frame] && right_total_berries[center_frame] > front_berry_sum) {
-        right_incentive += params->berry_sensitivity;
+        right_incentive += berry_sensitivity;
     } else {
-        front_incentive += params->berry_sensitivity;
+        front_incentive += berry_sensitivity;
     }
 
     // determine zombie avoidance incentive
