@@ -381,6 +381,7 @@ static int max_colors[10][3] = {{26, 96, 180}, {21, 152, 129}, {37, 192, 41}, {1
                                {209, 62, 44}, {193, 124, 167}, {194, 124, 85}, {207, 195, 37},
                                {222, 223, 239}, {35, 36, 38}};
 
+// Control parameter struct fed to robot_control function
 typedef struct control{
   Queue *q;
   long long time;
@@ -393,7 +394,7 @@ typedef struct control{
   float zombie_sensitivity, berry_sensitivity, obstacle_sensitivity;
 } Control;
 
-
+// rgb to hsv image channel conversion
 void rgb_to_hsv(int rgb[], double *hsv) {
     double red = rgb[0]/255.0;
     double green = rgb[1]/255.0;
