@@ -13,10 +13,9 @@ Design of a controller for a robot to survive a harsh, challenging simulated wor
 6. [Further Steps](https://github.com/jmc359/youbot#further-steps)
 7. [Team Members & Details](https://github.com/jmc359/youbot#lambda-5-team)
 
-## Moving Mechanisms
-Functions and definitions for moving the robot base
-- `translate()` 
-  - Moves the robot forward or backward based on a direction parameter
+## Robot Control
+Functions and definitions for overall robot control
+
 - `main()` &rarr; `robot_control()`, 
     - control parameters
       - `timer`
@@ -42,12 +41,18 @@ Functions and definitions for moving the robot base
       - `robot_info` 
         - current robot control info (health, energy, armor) used for comparison and behavior selection
 
-    - `robot_control()` &rarr; `if(timer % 8 == 0)`, initiates camera captures and processing every other time step.
+    - `robot_control()` 
+      - initiates camera captures and processing every other time step
+      - arbitrates subsumptive behavior based on sensor inputs and control parameters above
 
-## Turning Mechanisms
-Functions and definitions for turning the robot base
-- `rotate()` - rotates the robot according to the direction parameters
-- `rotate_update()` - updates the turning timer (timesteps) and waits until that timer reaches a threshold before enabling translation again
+## Moving/Turning Mechanisms
+Functions and definitions for moving/turning the robot base
+- `translate()` 
+  - Moves the robot forward or backward based on a direction parameter
+- `rotate()` 
+  - rotates the robot according to the direction parameters
+- `rotate_update()` 
+  - updates the turning timer (timesteps) and waits until that timer reaches a threshold before enabling translation again
 - `robot_control()` &rarr; performing turn
 ```c
   {
