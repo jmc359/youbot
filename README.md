@@ -15,7 +15,7 @@ Design of a controller for a robot to survive a harsh, challenging simulated wor
 8. [Team Members & Details](https://github.com/jmc359/youbot#lambda-5-team)
 
 ## Overview
-<div style="width: 640px; height: 480px; margin: 10px; position: relative;"><iframe allowfullscreen frameborder="0" style="width:640px; height:480px" src="https://www.lucidchart.com/documents/embeddedchart/f55a31ab-42d9-4569-8f5a-295d040a1660" id="pwC.77cV~Rk8"></iframe></div>
+![Process Diagram](zombie_subsumption.png)
 
 Survival strategy, robot architecture, and member contributions are further described [here](https://docs.google.com/document/d/1WlIjJlwl738C2A598lwUwjbmD3yRyjaeprJOzWDRZYw/edit?usp=sharing).
 
