@@ -3,8 +3,8 @@
 Design of a controller for a robot to survive a harsh, challenging simulated world for as long as possible. For more information, see [world specifications](https://drive.google.com/file/d/1__hUKDCFwzRBgdBKmZmqddVbdgGxMGK4/view?usp=sharing).
 
 **Contents**
-1. [Moving Mechanisms](https://github.com/jmc359/youbot#moving-mechanisms)
-2. [Turning Mechanisms](https://github.com/jmc359/youbot#turning-mechanisms)
+1. [Robot Control](https://github.com/jmc359/youbot#robot-control)
+2. [Moving Mechanisms](https://github.com/jmc359/youbot#moving-mechanisms)
 3. [Image Processing](https://github.com/jmc359/youbot#image-processing)
    - [Color Processing](https://github.com/jmc359/youbot#color-processing)
    - [Whole-Image Processing](https://github.com/jmc359/youbot#whole-image-processing)
@@ -45,7 +45,7 @@ Functions and definitions for overall robot control
       - initiates camera captures and processing every other time step
       - arbitrates subsumptive behavior based on sensor inputs and control parameters above
 
-## Moving/Turning Mechanisms
+## Moving Mechanisms
 Functions and definitions for moving/turning the robot base
 - `translate()` 
   - Moves the robot forward or backward based on a direction parameter
