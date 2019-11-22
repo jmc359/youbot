@@ -15,36 +15,42 @@ Design of a controller for a robot to survive a harsh, challenging simulated wor
 
 ## Moving Mechanisms
 Functions and definitions for moving the robot base
-- `translate()` - Joe?
+- `translate()` - Moves the robot forward or backward based on a direction parameter
 - `main()` &rarr; `robot_control()`, parameters
     - `timer`, a variable local to `main()` that is defined outside of `robot_control` so that it does not reset every time step
-    - `turning` - Joe?
-    - `timesteps` - Joe?
-    - `threshold`, a safety threshold for initiating turn; because turning is time-consuming, it should be used sparsely and decivisely
-    - `last_info` - Joe?
-    - `robot_info` - Joe?
-- `robot_control()` &rarr; `if(timer % 16 == 0)`, initiates camera captures and processing every other time step.
+    - `last_gps`, last value of the gps, stored for comparison in determining whether the robot has gotten itself stuck
+    - `turning`, boolean flag indicating if robot is turning
+    - `timesteps`, keeps track of how many timesteps the robot has spent turning
+    - `stuck_steps`, keeps track of how long the robot has been stuck while trying to move forward
+    - `time`, keeps track of time spent in total timesteps
+    - `zombie_threshold`, a safety threshold for initiating turn loosely corresponding to how close the zombie is in view of a camera
+    - `berry_threshold`, a threshold for determining when to navigate toward berries
+    - `obstacle_threshold`, a threshold for determining when to engage in obstacle avoidance
+    - `last_info` - last robot control info (health, energy, armor) used for comparison and behavior selection
+    - `robot_info` - current robot control info (health, energy, armor) used for comparison and behavior selection
+
+    - `robot_control()` &rarr; `if(timer % 8 == 0)`, initiates camera captures and processing every other time step.
 
 ## Turning Mechanisms
 Functions and definitions for turning the robot base
-- `rotate()` - Joe?
-- `rotate_update()` - Joe?
+- `rotate()` - rotates the robot according to the direction parameters
+- `rotate_update()` - updates the turning timer (timesteps) and waits until that timer reaches a threshold before enabling translation again
 - `robot_control()` &rarr; performing turn
 ```c
-// ... 
-    if (zombieness > threshold) { // does calculated safety level warrant a turn?
-          if (safest_direction == 0){ // turn left
-            printf("ROTATING LEFT\n");
-            rotate(LEFT, turning, timesteps);
-          }
-          else if (safest_direction == 1){ // turn right
-            printf("ROTATING RIGHT\n");
-            rotate(RIGHT, turning, timesteps);
-          }
-        }
+  {
+    // ... 
+    int direction = analyze_cameras(...);
+
+    // ...
+
+    // make_turn
+    if (direction == RIGHT || direction == LEFT) {
+        rotate(direction, &(params->turning), &(params->timesteps), params->q, params->time);
     }
-translate(FORWARD, turning); // after turn, continue moving forward
-rotate_update(turning, timesteps);
+  }
+  translate(FORWARD, &(params->turning));
+  rotate_update(&(params->turning), &(params->timesteps));
+
 ```
 
 ## Image Processing
@@ -54,13 +60,13 @@ Functions and definitions for interpreting raw images taken of the local environ
 - `grayDeviation()`
     - returns how unlike gray a given rgb value is, the standard deviation of the `r`, `g`, and `b` values
     - can be implemented as a detector of 'stuck' situations. For example, the edge of the world is gray, a tree trunk/stump is black, and a wall can be any shade of gray depending on light source angling
-- `rgb_to_hsv()
+- `rgb_to_hsv()`
    - converts RGB color scheme to HSV for more accurate color comparison across shadows
    - modifies a pointer to hsv[3] array with the corresponding hue, saturation, and value components
-- `in_range()
+- `in_range()`
    - determines whether a color is within `hue_epsilon` of target hue and `epsilon` of target saturation and value for a given color
    - built to be a helper function for `color_mask_image()`, as it is used to compare each pixel value to target colors for zombies, berries, walls, obstacles, etc.
-- `color_mask_image()
+- `color_mask_image()`
    - creates a binary mask for a particular image of size `image_height` x `image_width` by comparing image pixel values with given RGB comparison color
    - evaluated pixel-by-pixel, where each pixel in the mask has the boolean value `in_range(hsv_pixel, target_hsv_color)`.
 
@@ -94,31 +100,42 @@ Functions and definitions for evaluating the safety of the local environment
       - in safe situations (no impending collision or zombies) move towards visible berries
       - if no berries visible, drive forward
    - the activation of each behavior is thresholded by hyperparameters of the system
+- `override()`
+  - makes sure that the robot does not get caught in turn cycles by investigating the previous few turns in the history and comparing turn times and directions
 - `robot_control()` &rarr; controls distribution of direction controls to robot
    - given a control from `analyze_cameras(...)`, computes whether to send controls as prescribed or override behavior with more urgent controls
    - overrides direction from `analyze_cameras()` if the robot is stuck in a loop or an edge/corner
 ```c
-int camera_direction = FORWARD;
-camera_direction = analyze_cameras(...);
+{
+    // ... 
+    int direction = analyze_cameras(...);
 
-// make turn
-if (camera_direction == RIGHT || camera_direction == LEFT) {
-   printf("ROTATING FROM CAMERA\n");
-   rotate(camera_direction, &(params->turning), &(params->timesteps), params->q, params->time);
-}
+    // override if turning in cycles
+    int override_direction = override(params->q);
 
-// override if turning in cycles
-int direction = override(params->q);
-if (direction >= 0){
- printf("OVERRIDING BAD BEHAVIOR\n");
- rotate(direction, &(params->turning), &(params->timesteps), params->q, params->time);
-}
+    // Turn if stuck
+    if (override_direction >= 0){
+      printf("OVERRIDING BAD BEHAVIOR\n");
+      direction = override_direction;
+    }
+    // if losing health from zombie, run forward
+    else if (params->last_info.health - params->current_info.health > 3) {
+        printf("OVERRIDING TO RUN\n");
+        direction = FORWARD;
+    }
+    // Get unstuck from walls/trees/edges/etc.
+    else if (is_stuck(params->last_gps, gps, &(params->stuck_steps), &(params->turning), &(params->timesteps))){
+      printf("GETTING UNSTUCK\n");
+      direction = LEFT;
+    }
 
-// Get unstuck from walls/trees/edges/etc.
-if (is_stuck(params->last_gps, gps, &(params->stuck_steps), &(params->turning), &(params->timesteps))){
- printf("GETTING UNSTUCK\n");
- rotate(LEFT, &(params->turning), &(params->timesteps), params->q, params->time);
+    // make_turn
+    if (direction == RIGHT || direction == LEFT) {
+        rotate(direction, &(params->turning), &(params->timesteps), params->q, params->time);
+    }
 }
+translate(FORWARD, &(params->turning));
+rotate_update(&(params->turning), &(params->timesteps));
 ```
 
 ## Helper Functions
@@ -142,19 +159,12 @@ Helper methods for tests and aforementioned processes
     - however, currently implemented as a test for the compass sensor because of world 3 revised turning specification, see `get_bearing_in_degrees()`
  
 ## Further Steps
-1. **improving default zombie avoidance behavior**
-    - adjusting safety threshold to 'learn' from environment
-    - separating zombie avoidance from general safety evaluations
-    - creating a priority list for handling zombie avoidance situations, such as choosing between purple versus aqua zombie, staying close to wall or berry location according to the circumstance
-2. **optimizing current image processing**
-    - mostly done - robot is still accurately detecting color maps of zombies and berries and will actively seek berries and avoid zombies (kind of)
-3. **improving wall detection and avoidance**
-4. **optimizing berry detection and collection**
+1. **optimizing berry detection and collection**
     - creating a global berry map that allows the robot to 'remember' general location of berries
     - implement a 'berry necessity' function that evaluates when to ignore a found berry or initiate a berry search
     - implement 'learning' for berry effects; for example, avoid yellow berries if they often decrease energy
-5. **avoiding zombies based on color**
-6. **using the gripper**, exploring the use of the gripper for getting berries on top tree stumps
+2. **avoiding zombies based on color**
+3. **using the gripper**, exploring the use of the gripper for getting berries on top tree stumps
 
 ## Lambda (5) Team
 - Rebecca Ramnauth, [rebecca.ramnauth@yale.edu](mailto:rebecca.ramnauth@yale.edu)

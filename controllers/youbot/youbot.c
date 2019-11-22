@@ -157,7 +157,7 @@ void enqueue(Queue *q, int direction, long long steps){
     q->tail = t;
   }
   q->n++;
-  if (q->n > 3){
+  if (q->n > 4){
     Turn *tmp = dequeue(q);
     free(tmp);
   }
@@ -294,8 +294,8 @@ void rotate(int direction, int *turning, int *timesteps, Queue *q, long long tim
     (*turning) = 1;
     enqueue(q, direction, time);
     switch(direction){
-      case LEFT:  turn_right(); break; // **original functions are swapped**
-      case RIGHT: turn_left(); break;
+      case LEFT:  turn_right(); printf("TURNING LEFT\n"); break; // **original functions are swapped**
+      case RIGHT: turn_left(); printf("TURNING RIGHT\n"); break;
     }
   }
 }
@@ -327,12 +327,11 @@ void translate(int direction, int *turning){
 // handles getting stuck near edge of world/wall/etc.
 int is_stuck(double *last_gps, const double *gps, int *steps, int *turning, int *timesteps){
   double diff0 = fabs(gps[0] - last_gps[0]);
-  double diff1 = fabs(gps[1] - last_gps[1]);
   double diff2 = fabs(gps[2] - last_gps[2]);
-  printf("Delta: %f %f %f\n", diff0, diff1, diff2);
+  // printf("Delta: %f %f %f\n", diff0, diff1, diff2);
   if(!(*turning)){
     if (diff0 < 0.002 && diff2 < 0.002){
-      if (*steps <= 3){
+      if (*steps <= 1){
         (*steps)++;
       }
       else{
@@ -668,22 +667,22 @@ void analyze_camera_view(int viewpanes_vertical, int viewpanes_horizontal, int i
     int num_zombie_colors = 4;
     compute_color_viewpane_sums(viewpanes_vertical, viewpanes_horizontal, image_width, image_height, image,
                                 num_zombie_colors, zombie_colors, total_danger, 0);
-    printf("Total danger: ");
-    print_array(total_danger, viewpanes_vertical);
+    // printf("Total danger: ");
+    // print_array(total_danger, viewpanes_vertical);
 
     // check for berries
     int num_berry_colors = 4;
     compute_color_viewpane_sums(viewpanes_vertical, viewpanes_horizontal, image_width, image_height, image,
                                 num_berry_colors, berry_colors, total_berries, 1);
-    printf("Total berries: ");
-    print_array(total_berries, viewpanes_vertical);
+    // printf("Total berries: ");
+    // print_array(total_berries, viewpanes_vertical);
 
     // check for obstacles
     int num_obstacle_colors = 1;
     compute_color_viewpane_sums(viewpanes_vertical, viewpanes_horizontal, image_width, image_height, image,
                                 num_obstacle_colors, obstacle_colors, total_obstacles, 0);
-    printf("Total obstacles: ");
-    print_array(total_obstacles, viewpanes_vertical);
+    // printf("Total obstacles: ");
+    // print_array(total_obstacles, viewpanes_vertical);
 }
 
 int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horizontal, int front_image_width, int front_image_height,
@@ -788,11 +787,12 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
      
      // choose a direction according to incentive consensus
      printf("incentives [left, front, right] = [%.2f, %.2f, %.2f]\n", left_incentive, front_incentive, right_incentive);
-     if (front_incentive > left_incentive && front_incentive > right_incentive) direction = FORWARD;
-     else if (left_incentive > right_incentive && left_incentive > front_incentive) direction = LEFT;
+     if (front_incentive >= left_incentive && front_incentive >= right_incentive) direction = FORWARD;
+     else if (left_incentive >= right_incentive && left_incentive >= front_incentive) direction = LEFT;
      else direction = RIGHT;
      
      // correct for bad planned turns
+     printf("danger sum [left, front, right] = [%.2f, %.2f, %.2f]\n", left_danger_sum, front_danger_sum, right_danger_sum);
      int front_dangerous = front_danger_sum > params->zombie_threshold || front_obstacle_sum > params->obstacle_threshold;
      int right_dangerous = right_danger_sum > params->zombie_threshold || right_obstacle_sum > params->obstacle_threshold;
      int left_dangerous = left_danger_sum > params->zombie_threshold || left_obstacle_sum > params->obstacle_threshold;
@@ -815,7 +815,7 @@ int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horiz
         }
      }
 
-    printf("DIRECTION: %d\n", direction);
+    // printf("DIRECTION: %d\n", direction);
     return direction;
 }
 
@@ -838,7 +838,7 @@ void robot_control(int timer, Control *params)
     if (timer % 16 == 0) {
         // print sensor values
         printf("\n");
-        printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", gps[0], gps[1], gps[2]);
+        // printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", gps[0], gps[1], gps[2]);
 
         int direction = analyze_cameras(params, viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height,
                                     right_image_width, right_image_height, left_image_width, left_image_height);
@@ -851,7 +851,7 @@ void robot_control(int timer, Control *params)
           direction = override_direction;
         }
         // if losing health from zombie, run forward
-        else if (params->last_info.health - params->current_info.health == 8) {
+        else if (params->last_info.health - params->current_info.health > 3) {
             printf("OVERRIDING TO RUN\n");
             direction = FORWARD;
         }
@@ -949,7 +949,7 @@ int main(int argc, char **argv)
   parameters->berry_threshold = 0.5;
   parameters->obstacle_threshold = 15.0;
   
-  parameters->zombie_sensitivity= 0.75;
+  parameters->zombie_sensitivity= 0.65;
   parameters->berry_sensitivity = 0.15;
   parameters->obstacle_sensitivity = 0.10;
   
