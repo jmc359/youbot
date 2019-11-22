@@ -3,15 +3,21 @@
 Design of a controller for a robot to survive a harsh, challenging simulated world for as long as possible. For more information, see [world specifications](https://drive.google.com/file/d/1__hUKDCFwzRBgdBKmZmqddVbdgGxMGK4/view?usp=sharing).
 
 **Contents**
-1. [Robot Control](https://github.com/jmc359/youbot#robot-control)
-2. [Moving Mechanisms](https://github.com/jmc359/youbot#moving-mechanisms)
-3. [Image Processing](https://github.com/jmc359/youbot#image-processing)
+1. [Overview](https://github.com/jmc359/youbot#overview)
+2. [Robot Control](https://github.com/jmc359/youbot#robot-control)
+3. [Moving Mechanisms](https://github.com/jmc359/youbot#moving-mechanisms)
+4. [Image Processing](https://github.com/jmc359/youbot#image-processing)
    - [Color Processing](https://github.com/jmc359/youbot#color-processing)
    - [Whole-Image Processing](https://github.com/jmc359/youbot#whole-image-processing)
-4. [Evaluating Safety](https://github.com/jmc359/youbot#evaluating-safety)
-5. [Helper Functions](https://github.com/jmc359/youbot#helper-functions)
-6. [Further Steps](https://github.com/jmc359/youbot#further-steps)
-7. [Team Members & Details](https://github.com/jmc359/youbot#lambda-5-team)
+5. [Evaluating Safety](https://github.com/jmc359/youbot#evaluating-safety)
+6. [Helper Functions](https://github.com/jmc359/youbot#helper-functions)
+7. [Further Steps](https://github.com/jmc359/youbot#further-steps)
+8. [Team Members & Details](https://github.com/jmc359/youbot#lambda-5-team)
+
+## Overview
+<div style="width: 640px; height: 480px; margin: 10px; position: relative;"><iframe allowfullscreen frameborder="0" style="width:640px; height:480px" src="https://www.lucidchart.com/documents/embeddedchart/f55a31ab-42d9-4569-8f5a-295d040a1660" id="pwC.77cV~Rk8"></iframe></div>
+
+Survival strategy, robot architecture, and member contributions are further described [here](https://docs.google.com/document/d/1WlIjJlwl738C2A598lwUwjbmD3yRyjaeprJOzWDRZYw/edit?usp=sharing).
 
 ## Robot Control
 Functions and definitions for overall robot control
