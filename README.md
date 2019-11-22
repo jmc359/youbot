@@ -161,9 +161,6 @@ Helper methods for tests and aforementioned processes
 - `getIndexOfMin()` 
     - returns the index of the minimum element in a given `float` array of `size_t` size
     - useful, alongside return values of safety functions (e.g., `calcZombiness()` and `isStuck()`, for determining the safest pane in view.
-- `getIndexOfMax()` 
-    - returns the index of the maximum element in a given `float` array of `size_t` size
-    - used in determining severity of zombie safety infringement
 - `sumOfArray()`
     - returns a `float` sum of all elements in a `float` array of size `n`
     - useful for calculating safety, a component of which is the total zombieness in a given frame
