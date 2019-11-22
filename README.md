@@ -15,19 +15,32 @@ Design of a controller for a robot to survive a harsh, challenging simulated wor
 
 ## Moving Mechanisms
 Functions and definitions for moving the robot base
-- `translate()` - Moves the robot forward or backward based on a direction parameter
-- `main()` &rarr; `robot_control()`, parameters
-    - `timer`, a variable local to `main()` that is defined outside of `robot_control` so that it does not reset every time step
-    - `last_gps`, last value of the gps, stored for comparison in determining whether the robot has gotten itself stuck
-    - `turning`, boolean flag indicating if robot is turning
-    - `timesteps`, keeps track of how many timesteps the robot has spent turning
-    - `stuck_steps`, keeps track of how long the robot has been stuck while trying to move forward
-    - `time`, keeps track of time spent in total timesteps
-    - `zombie_threshold`, a safety threshold for initiating turn loosely corresponding to how close the zombie is in view of a camera
-    - `berry_threshold`, a threshold for determining when to navigate toward berries
-    - `obstacle_threshold`, a threshold for determining when to engage in obstacle avoidance
-    - `last_info` - last robot control info (health, energy, armor) used for comparison and behavior selection
-    - `robot_info` - current robot control info (health, energy, armor) used for comparison and behavior selection
+- `translate()` 
+  - Moves the robot forward or backward based on a direction parameter
+- `main()` &rarr; `robot_control()`, 
+    - control parameters
+      - `timer`
+        - a variable local to `main()` that is defined outside of `robot_control` so that it does not reset every time step
+      - `last_gps`
+        - last value of the gps, stored for comparison in determining whether the robot has gotten itself stuck
+      - `turning`
+        - boolean flag indicating if robot is turning
+      - `timesteps`
+        - keeps track of how many timesteps the robot has spent turning
+      - `stuck_steps` 
+        - keeps track of how long the robot has been stuck while trying to move forward
+      - `time` 
+        - keeps track of time spent in total timesteps
+      - `zombie_threshold` 
+        - a safety threshold for initiating turn loosely corresponding to how close the zombie is in view of a camera
+      - `berry_threshold`
+        - a threshold for determining when to navigate toward berries
+      - `obstacle_threshold` 
+        - a threshold for determining when to engage in obstacle avoidance
+      - `last_info` 
+        - last robot control info (health, energy, armor) used for comparison and behavior selection
+      - `robot_info` 
+        - current robot control info (health, energy, armor) used for comparison and behavior selection
 
     - `robot_control()` &rarr; `if(timer % 8 == 0)`, initiates camera captures and processing every other time step.
 
