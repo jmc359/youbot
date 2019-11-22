@@ -186,7 +186,7 @@ int override(Queue *q){
     Turn *t = q->head;
     int override = 1;
     for (int i = 0; i < q->n-1; i++){
-      if (t->next->steps - t->steps > 300 || t->next->direction == t->direction){
+      if (t->next->steps - t->steps > 250 || t->next->direction == t->direction){
         override = 0;
       }
       t = t->next;
@@ -213,6 +213,18 @@ int getIndexOfMin(float* array, size_t size){
          minimum = i;
   }
   return minimum;
+}
+
+// returns index of maximum int in @array
+int getIndexOfMax(float* array, size_t size){
+  int maximum = 0;
+
+  for (int i = 1; i < size; i++)
+  {
+      if (array[i] > array[maximum])
+         maximum = i;
+  }
+  return maximum;
 }
 
 void print_array(float array[], int size) {
@@ -342,16 +354,20 @@ float calcZombiness(int g, int b){
  * Functions for image processing (masking/zombiness/etc.)
  */
 
-#define BLUE 0
-#define AQUA 1
-#define GREEN 2
-#define PURPLE 3
-#define RED 4
-#define PINK 5
-#define ORANGE 6
-#define YELLOW 7
-#define WHITE 8
-#define BLACK 9
+#define BLUE (0)
+#define AQUA (1)
+#define GREEN (2)
+#define PURPLE (3)
+#define RED (4)
+#define PINK (5)
+#define ORANGE (6)
+#define YELLOW (7)
+#define WHITE (8)
+#define BLACK (9)
+
+#define ZOMBIE (0)
+#define BERRY (1)
+#define OBSTACLE (2)
 
 static int zombie_colors[4] = {BLUE, AQUA, GREEN, PURPLE};
 static int berry_colors[4] = {RED, PINK, ORANGE, YELLOW};
@@ -364,6 +380,19 @@ static int min_colors[10][3] = {{10, 39, 97}, {11, 67, 68}, {11, 51, 16}, {45, 1
 static int max_colors[10][3] = {{26, 96, 180}, {21, 152, 129}, {37, 192, 41}, {115, 49, 185},
                                {209, 62, 44}, {193, 124, 167}, {194, 124, 85}, {207, 195, 37},
                                {222, 223, 239}, {35, 36, 38}};
+
+typedef struct control{
+  Queue *q;
+  long long time;
+  double *last_gps;
+  float confidence;
+  float berry_confidence[4];
+  struct Robot current_info, last_info;
+  int turning, timesteps, stuck_steps, last_berry;
+  float zombie_threshold, berry_threshold, obstacle_threshold;
+  float zombie_sensitivity, berry_sensitivity, obstacle_sensitivity;
+} Control;
+
 
 void rgb_to_hsv(int rgb[], double *hsv) {
     double red = rgb[0]/255.0;
@@ -599,7 +628,8 @@ float *get_views_vertical_mask(int viewpanes_vertical, int viewpanes_horizontal,
 // computes a sum over colors by viewpanes
 // this function is for detecting/seeking berries and avoiding zombies and walls
 void compute_color_viewpane_sums(int viewpanes_vertical, int viewpanes_horizontal, int image_width, int image_height, const unsigned char *image,
-                                 int num_colors, int colors[num_colors], float color_sums[viewpanes_vertical], bool bottom_only)
+                                 int num_colors, int colors[num_colors], float color_sums[viewpanes_vertical], bool bottom_only, float *berry_confidence,
+                                 int direction, int type, Control *params)
 {
     float factor = 1;
     for (int i = 0; i < viewpanes_vertical; i++) {
@@ -612,6 +642,9 @@ void compute_color_viewpane_sums(int viewpanes_vertical, int viewpanes_horizonta
         if (color == PURPLE) {
             factor = 2;
         }
+        if (bottom_only){ // update berry importance based on history
+          factor *= berry_confidence[i];
+        }
         int mask_image[image_width][image_height];
         color_mask_image(image, color, image_width, image_height, mask_image);
 
@@ -619,75 +652,81 @@ void compute_color_viewpane_sums(int viewpanes_vertical, int viewpanes_horizonta
         for (int j = 0; j < viewpanes_vertical; j++) {
             color_sums[j] += factor * views_vertical[j];
         }
+        if (direction == FORWARD && type == BERRY){
+          params->last_berry = getIndexOfMax(color_sums, num_colors);        
+        }
         free(views_vertical);
     }
 }
 
 /*
- * Main robot control function, called every time step
+ * Main robot control functions, called every time step
  */
 
-typedef struct control{
-  double *last_gps;
-  int turning, timesteps, stuck_steps;
-  float zombie_threshold, berry_threshold, obstacle_threshold;
-  float zombie_sensitivity, berry_sensitivity, obstacle_sensitivity;
-  Queue *q;
-  struct Robot current_info, last_info;
-  long long time;
-} Control;
+// Function to update confidence in positive effects of berries
+void berry_update(Control *params){
+  double health_diff = params->current_info.health - params->last_info.health;
+  double energy_diff = params->current_info.energy - params->last_info.energy;
+  if (health_diff > 0 || energy_diff > 0){
+    params->berry_confidence[params->last_berry] += params->confidence;
+  }
+  else if (energy_diff < -10){
+    params->berry_confidence[params->last_berry] -= params->confidence;
+  }
+}
 
 // perform computations to analyze danger/berriness/obstruction of camera view
 void analyze_camera_view(int viewpanes_vertical, int viewpanes_horizontal, int image_width, int image_height, const unsigned char* image,
-                         float total_danger[viewpanes_vertical], float total_berries[viewpanes_vertical], float total_obstacles[viewpanes_vertical])
+                         float total_danger[viewpanes_vertical], float total_berries[viewpanes_vertical], float total_obstacles[viewpanes_vertical],
+                         float berry_confidence[4], int direction, Control *params)
 {
     int num_zombie_colors = 4;
     compute_color_viewpane_sums(viewpanes_vertical, viewpanes_horizontal, image_width, image_height, image,
-                                num_zombie_colors, zombie_colors, total_danger, 0);
+                                num_zombie_colors, zombie_colors, total_danger, 0, berry_confidence, direction, ZOMBIE, params);
     // printf("Total danger: ");
     // print_array(total_danger, viewpanes_vertical);
 
     // check for berries
     int num_berry_colors = 4;
     compute_color_viewpane_sums(viewpanes_vertical, viewpanes_horizontal, image_width, image_height, image,
-                                num_berry_colors, berry_colors, total_berries, 1);
+                                num_berry_colors, berry_colors, total_berries, 1, berry_confidence, direction, BERRY, params);
     // printf("Total berries: ");
     // print_array(total_berries, viewpanes_vertical);
 
     // check for obstacles
     int num_obstacle_colors = 1;
     compute_color_viewpane_sums(viewpanes_vertical, viewpanes_horizontal, image_width, image_height, image,
-                                num_obstacle_colors, obstacle_colors, total_obstacles, 0);
+                                num_obstacle_colors, obstacle_colors, total_obstacles, 0, berry_confidence, direction, OBSTACLE, params);
     // printf("Total obstacles: ");
     // print_array(total_obstacles, viewpanes_vertical);
 }
 
-int analyze_cameras(Control *params, int viewpanes_vertical, int viewpanes_horizontal, int front_image_width, int front_image_height,
-                    int right_image_width, int right_image_height, int left_image_width, int left_image_height) {
+int analyze_cameras(int viewpanes_vertical, int viewpanes_horizontal, int front_image_width, int front_image_height,
+                    int right_image_width, int right_image_height, int left_image_width, int left_image_height, Control *params) {
     const unsigned char *front_image = wb_camera_get_image(4);
     const unsigned char *right_image = wb_camera_get_image(9);
     const unsigned char *left_image = wb_camera_get_image(10);
 
-    printf("Right camera:\n");
+    // printf("Right camera:\n");
     float right_total_danger[viewpanes_vertical];
     float right_total_berries[viewpanes_vertical];
     float right_total_obstacles[viewpanes_vertical];
     analyze_camera_view(viewpanes_vertical, viewpanes_horizontal, right_image_width, right_image_height, right_image,
-                        right_total_danger, right_total_berries, right_total_obstacles);
+                        right_total_danger, right_total_berries, right_total_obstacles, params->berry_confidence, RIGHT, params);
 
-    printf("Left camera:\n");
+    // printf("Left camera:\n");
     float left_total_danger[viewpanes_vertical];
     float left_total_berries[viewpanes_vertical];
     float left_total_obstacles[viewpanes_vertical];
     analyze_camera_view(viewpanes_vertical, viewpanes_horizontal, left_image_width, left_image_height, left_image,
-                        left_total_danger, left_total_berries, left_total_obstacles);
+                        left_total_danger, left_total_berries, left_total_obstacles, params->berry_confidence, LEFT, params);
 
-    printf("Front camera:\n");
+    // printf("Front camera:\n");
     float front_total_danger[viewpanes_vertical];
     float front_total_berries[viewpanes_vertical];
     float front_total_obstacles[viewpanes_vertical];
     analyze_camera_view(viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height, front_image,
-                        front_total_danger, front_total_berries, front_total_obstacles);
+                        front_total_danger, front_total_berries, front_total_obstacles, params->berry_confidence, FORWARD, params);
 
     int mask_image[front_image_width][front_image_height];
     color_mask_image(left_image, PINK, front_image_width, front_image_height, mask_image);
@@ -815,10 +854,12 @@ void robot_control(int timer, Control *params)
     if (timer % 16 == 0) {
         // print sensor values
         printf("\n");
+        printf("Berries: ");
+        print_array(params->berry_confidence, 4);
         // printf("GPS:  [ x y z ] = [ %+.3f %+.3f %+.3f ]\n", gps[0], gps[1], gps[2]);
 
-        int direction = analyze_cameras(params, viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height,
-                                    right_image_width, right_image_height, left_image_width, left_image_height);
+        int direction = analyze_cameras(viewpanes_vertical, viewpanes_horizontal, front_image_width, front_image_height,
+                                    right_image_width, right_image_height, left_image_width, left_image_height, params);
 
         // override if turning in cycles
         int override_direction = override(params->q);
@@ -842,6 +883,8 @@ void robot_control(int timer, Control *params)
         if (direction == RIGHT || direction == LEFT) {
             rotate(direction, &(params->turning), &(params->timesteps), params->q, params->time);
         }
+        printf("Berry in front: %d\n", params->last_berry);
+        berry_update(params);
     }
     translate(FORWARD, &(params->turning));
     rotate_update(&(params->turning), &(params->timesteps));
@@ -934,6 +977,13 @@ int main(int argc, char **argv)
   parameters->current_info = current_info;
   parameters->q = queue_constuct();
 
+  parameters->berry_confidence[0] = 1;
+  parameters->berry_confidence[1] = 1;
+  parameters->berry_confidence[2] = 1;
+  parameters->berry_confidence[3] = 1;
+  parameters->last_berry = 0;
+  parameters->confidence = 0.3;
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////// CHANGE CODE ABOVE HERE ONLY ////////////////////////////////////////////////////
@@ -968,14 +1018,17 @@ int main(int argc, char **argv)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // control function called every time step
-    
-    parameters->current_info.health = robot_info.health;
-    parameters->current_info.energy = robot_info.energy;
+    if (timer % 16 == 0){
+      parameters->current_info.health = robot_info.health;
+      parameters->current_info.energy = robot_info.energy;
+    }
 
     robot_control(timer, parameters);
-    
-    parameters->last_info.health = robot_info.health;
-    parameters->last_info.energy = robot_info.energy;
+
+    if (timer % 16 == 0){
+      parameters->last_info.health = robot_info.health;
+      parameters->last_info.energy = robot_info.energy;
+    }
     
     (parameters->time)++;
 
